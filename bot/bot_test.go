@@ -21,9 +21,8 @@ const folderId = "1HcCIw7ppJZPD9GEHccnkgNYUwhAGCif6"
 
 func TestLs(t *testing.T) {
 	b := &Bot{
-		Ls:       true,
-		Credpath: credpath,
-		Folderid: folderId,
+		Ls:   true,
+		Conf: &Conf{Credpath: credpath, Folderid: folderId},
 	}
 	err := b.Init()
 	Tassert(t, err == nil, err)
@@ -48,8 +47,7 @@ func TestLs(t *testing.T) {
 
 func TestIndex(t *testing.T) {
 	b := &Bot{
-		Credpath: credpath,
-		Folderid: folderId,
+		Conf: &Conf{Credpath: credpath, Folderid: folderId},
 	}
 	err := b.Init()
 	Tassert(t, err == nil, err)

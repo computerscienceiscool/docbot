@@ -1,3 +1,5 @@
+session-template () ()
+mcp-template () ()
 mcp-3-dvm-overview () ()
 mcp-2-repository-gitlab () ()
 mcp-4-why-numbered-docs () ()
