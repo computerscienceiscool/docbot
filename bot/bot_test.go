@@ -2,7 +2,10 @@ package bot
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	// "github.com/sergi/go-diff/diffmatchpatch"
@@ -25,7 +28,8 @@ func TestLs(t *testing.T) {
 	err := b.Init()
 	Tassert(t, err == nil, err)
 
-	got := b.ls()
+	got, err := b.ls()
+	Tassert(t, err == nil, err)
 	// Pl(string(got))
 
 	reffn := "testdata/ls.txt"
@@ -42,7 +46,7 @@ func TestLs(t *testing.T) {
 	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
 }
 
-func TestIndexHtml(t *testing.T) {
+func TestIndex(t *testing.T) {
 	b := &Bot{
 		Credpath: credpath,
 		Folderid: folderId,
@@ -50,7 +54,16 @@ func TestIndexHtml(t *testing.T) {
 	err := b.Init()
 	Tassert(t, err == nil, err)
 
-	got := b.indexHtml()
+	// https://pkg.go.dev/net/http/httptest#NewRequest
+	// https://golang.cafe/blog/golang-httptest-example.html
+	ts := httptest.NewServer(http.HandlerFunc(b.index))
+	defer ts.Close()
+	res, err := http.Get(ts.URL)
+	Tassert(t, err == nil, err)
+	got, err := io.ReadAll(res.Body)
+	Tassert(t, err == nil, err)
+	res.Body.Close()
+
 	Pl(string(got))
 
 	reffn := "testdata/index.html"
