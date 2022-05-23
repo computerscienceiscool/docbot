@@ -3,6 +3,7 @@ package google
 import (
 	"context"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"sync"
@@ -34,6 +35,7 @@ type Node struct {
 
 type cache struct {
 	nodes   []*Node
+	byname  map[string]*Node
 	time    time.Time
 	lastNum int
 }
@@ -45,7 +47,7 @@ func New(cbuf []byte, folderid string) (g *Google, err error) {
 	defer Return(&err)
 
 	g = &Google{folderid: folderid}
-	g.cache = &cache{}
+	g.clearcache()
 
 	ctx := context.Background()
 
@@ -55,6 +57,11 @@ func New(cbuf []byte, folderid string) (g *Google, err error) {
 	g.drive, err = drive.NewService(ctx, option.WithCredentialsJSON(cbuf))
 	Ck(err)
 	return
+}
+
+func (g *Google) clearcache() {
+	g.cache = &cache{}
+	g.cache.byname = make(map[string]*Node)
 }
 
 func (g *Google) put() {
@@ -74,7 +81,7 @@ func (g *Google) put() {
 
 	Pl(file.Id)
 
-	// XXX clear cache
+	g.clearcache()
 }
 
 /*
@@ -163,9 +170,20 @@ func (g *Google) AllNodes() (nodes []*Node, err error) {
 	if time.Now().Sub(g.cache.time) < time.Minute {
 		return g.cache.nodes, nil
 	}
+	g.clearcache()
 
 	nodes, lastNum, err := g.getNodes("")
 	Ck(err)
+
+	for _, node := range nodes {
+		// add to cache
+		_, found := g.cache.byname[node.Name]
+		if found {
+			// XXX handle
+			log.Printf("duplicate filename: %s", node.Name)
+		}
+		g.cache.byname[node.Name] = node
+	}
 
 	g.cache.nodes = nodes
 	g.cache.lastNum = lastNum
@@ -199,6 +217,8 @@ func (g *Google) getNodes(query string) (nodes []*Node, lastNum int, err error) 
 		re := regexp.MustCompile(`^mcp-(\d+)-`)
 		for _, f := range res.Items {
 			// f is a *drive.File
+
+			// get num
 			m := re.FindStringSubmatch(f.Title)
 			var num int
 			if len(m) == 2 {
@@ -207,6 +227,8 @@ func (g *Google) getNodes(query string) (nodes []*Node, lastNum int, err error) 
 					lastNum = num
 				}
 			}
+
+			// make node
 			n := &Node{
 				file:    f,
 				Name:    f.Title,
@@ -214,7 +236,9 @@ func (g *Google) getNodes(query string) (nodes []*Node, lastNum int, err error) 
 				Created: f.CreatedDate,
 				URL:     f.AlternateLink,
 			}
+
 			nodes = append(nodes, n)
+
 		}
 
 		pageToken = res.NextPageToken
@@ -222,6 +246,20 @@ func (g *Google) getNodes(query string) (nodes []*Node, lastNum int, err error) 
 			break
 		}
 	}
+
+	return
+}
+
+func (g *Google) Getnode(fn string) (node *Node, err error) {
+	defer Return(&err)
+
+	// refresh cache
+	_, err = g.AllNodes()
+	Ck(err)
+
+	// return nil if not found
+	node, _ = g.cache.byname[fn]
+	// Pf("%#v\n", g.cache)
 
 	return
 }

@@ -40,10 +40,11 @@ type Bot struct {
 }
 
 type Conf struct {
-	Credpath   string
-	Folderid   string
-	Url        string
-	MinNextNum int
+	Credpath     string
+	Folderid     string
+	TemplateName string
+	Url          string
+	MinNextNum   int
 }
 
 func (b *Bot) Init() (err error) {
@@ -113,13 +114,15 @@ type Page struct {
 	ResultsHeading string
 }
 
-func parm(r *http.Request, key string) (val string) {
-	if len(r.Form[key]) > 0 {
-		val = r.Form[key][0]
+/*
+func XXXparm(f *http.request.Form, key string) (val string) {
+	if len(f[key]) > 0 {
+		val = f[key][0]
 	}
-	Pl("form", key, val, r.Form)
+	Pl("form", key, val, f)
 	return
 }
+*/
 
 func render(w http.ResponseWriter, name string, p *Page) {
 	t, err := template.ParseFS(fs, Spf("template/%s.html", name))
@@ -133,16 +136,27 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	ckw(w, err)
 
+	title := r.Form.Get("title")
+
+	fn := r.Form.Get("filename")
+	if fn != "" {
+		var node *google.Node
+		node, err = b.opendoc(r, b.Conf.TemplateName, fn, title)
+		ckw(w, err)
+		http.Redirect(w, r, node.URL, http.StatusFound)
+		return
+	}
+
 	p := &Page{}
 	p.URL = b.Conf.Url
 	// "01/02 03:04:05PM '06 -0700"
 	p.YYYY = time.Now().Format("2006")
 
-	p.SearchQuery = parm(r, "query")
+	p.SearchQuery = r.Form.Get("query")
 	if p.SearchQuery == "" {
 		p.Nodes, err = b.g.AllNodes()
 		ckw(w, err)
-		p.ResultsHeading = ""
+		p.ResultsHeading = "All documents:"
 	} else {
 		q := Spf("fullText contains '%s'", p.SearchQuery)
 		p.Nodes, err = b.g.FindNodes(q)
@@ -181,7 +195,53 @@ func (b *Bot) NextNum() (next int, err error) {
 	return
 }
 
+// open or create file
+func (b *Bot) opendoc(r *http.Request, template, filename, title string) (node *google.Node, err error) {
+	defer Return(&err)
+	node, err = b.g.Getnode(filename)
+	Ck(err)
+	if node == nil {
+		// file doesn't exist -- create it
+		node, err = b.mkdoc(r, template, filename, title)
+		Ck(err)
+		Assert(node != nil, "%s, %s, %s", template, filename, title)
+	}
+	return
+}
+
+// create file
+func (b *Bot) mkdoc(r *http.Request, template, filename, title string) (node *google.Node, err error) {
+	// get template
+	tnode, err := b.g.Getnode(template)
+	Ck(err)
+	Assert(tnode != nil, template)
+	return
+}
+
 /*
+// create call or working group file
+function mkdoc(template, filename, title, parms) {
+  Logger.log(parms);
+  var folder = getfolder("MCP");
+  var file = template.file.makeCopy(filename, folder)
+  // populate
+  var doc = DocumentApp.openById(file.getId());
+  var body = doc.getBody();
+  var self_url = ScriptApp.getService().getUrl();
+  var unlock_url = self_url + "?unlock=t&filename=" + filename
+  try {
+    body.replaceText("NAME", filename);
+    body.replaceText("TITLE", title);
+    body.replaceText("SESSION_DATE", parms.session_date);
+    body.replaceText("SESSION_SPEAKERS", parms.session_speakers);
+    replaceWithUrl(body, "UNLOCK_URL", "http://bit.ly/mcp-index", unlock_url);
+  } catch (error) {
+    console.error("replaceText error: " + error);
+  }
+  var node = new Node(file);
+  return node;
+}
+
 // respond to a GET request
 function doGet(e) {
   // e.parameter contains the GET args
@@ -215,7 +275,6 @@ function doGet(e) {
   var tmpl = HtmlService.createTemplateFromFile('index');
   var nodes;
   if (query) {
-	XXX
     nodes = searchnodes("fullText contains '" + query + "'");
     tmpl.results_heading = "Search results for '" + query + "':";
   } else {
@@ -235,4 +294,5 @@ function doGet(e) {
   // return the index page
   return tmpl.evaluate();
 }
+
 */
