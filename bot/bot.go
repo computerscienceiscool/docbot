@@ -40,11 +40,12 @@ type Bot struct {
 }
 
 type Conf struct {
-	Credpath     string
-	Folderid     string
-	TemplateName string
-	Url          string
-	MinNextNum   int
+	Credpath        string
+	Folderid        string
+	Template        string
+	SessionTemplate string
+	Url             string
+	MinNextNum      int
 }
 
 func (b *Bot) Init() (err error) {
@@ -114,16 +115,6 @@ type Page struct {
 	ResultsHeading string
 }
 
-/*
-func XXXparm(f *http.request.Form, key string) (val string) {
-	if len(f[key]) > 0 {
-		val = f[key][0]
-	}
-	Pl("form", key, val, f)
-	return
-}
-*/
-
 func render(w http.ResponseWriter, name string, p *Page) {
 	t, err := template.ParseFS(fs, Spf("template/%s.html", name))
 	err = t.Execute(w, p)
@@ -141,7 +132,7 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 	fn := r.Form.Get("filename")
 	if fn != "" {
 		var node *google.Node
-		node, err = b.opendoc(r, b.Conf.TemplateName, fn, title)
+		node, err = b.opendoc(r, b.Conf.Template, fn, title)
 		ckw(w, err)
 		http.Redirect(w, r, node.URL, http.StatusFound)
 		return
@@ -191,7 +182,6 @@ func (b *Bot) NextNum() (next int, err error) {
 	if next < b.Conf.MinNextNum {
 		next = b.Conf.MinNextNum
 	}
-	// XXX race condition -- check to see if doc exists
 	return
 }
 
@@ -211,10 +201,18 @@ func (b *Bot) opendoc(r *http.Request, template, filename, title string) (node *
 
 // create file
 func (b *Bot) mkdoc(r *http.Request, template, filename, title string) (node *google.Node, err error) {
+	defer Return(&err)
 	// get template
+	Assert(len(template) > 0)
 	tnode, err := b.g.Getnode(template)
-	Ck(err)
+	Ck(err, template)
 	Assert(tnode != nil, template)
+
+	node, err = tnode.Copy(b.g, filename, title)
+	Ck(err)
+
+	// XXX do the template thing here
+
 	return
 }
 
