@@ -14,7 +14,7 @@ import (
 )
 
 // regenerate testdata
-const regen bool = true
+const regen bool = false
 
 const credpath = "../local/mcpbot-mcpbot-key.json"
 const folderId = "1HcCIw7ppJZPD9GEHccnkgNYUwhAGCif6"

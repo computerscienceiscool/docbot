@@ -31,14 +31,6 @@ func logw(args ...interface{}) {
 	log.Printf("%v: %v", r.(error).Error(), msg)
 }
 
-type Bot struct {
-	Ls    bool
-	Put   bool
-	Serve bool
-	Conf  *Conf
-	g     *google.Google
-}
-
 type Conf struct {
 	Credpath        string
 	Folderid        string
@@ -48,12 +40,20 @@ type Conf struct {
 	MinNextNum      int
 }
 
+type Bot struct {
+	Ls    bool
+	Put   bool
+	Serve bool
+	Conf  *Conf
+	gf    *google.Folder
+}
+
 func (b *Bot) Init() (err error) {
 
 	cbuf, err := ioutil.ReadFile(b.Conf.Credpath)
 	Ck(err)
 
-	b.g, err = google.New(cbuf, b.Conf.Folderid)
+	b.gf, err = google.NewFolder(cbuf, b.Conf.Folderid)
 	Ck(err)
 
 	return
@@ -107,7 +107,7 @@ func (b *Bot) serve() {
 }
 
 type Page struct {
-	Nodes          []*google.Node
+	Nodes          []google.Node
 	YYYY           string
 	NextNum        int
 	URL            string
@@ -145,12 +145,12 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 
 	p.SearchQuery = r.Form.Get("query")
 	if p.SearchQuery == "" {
-		p.Nodes, err = b.g.AllNodes()
+		p.Nodes, err = b.gf.AllNodes()
 		ckw(w, err)
 		p.ResultsHeading = "All documents:"
 	} else {
 		q := Spf("fullText contains '%s'", p.SearchQuery)
-		p.Nodes, err = b.g.FindNodes(q)
+		p.Nodes, err = b.gf.FindNodes(q)
 		ckw(w, err)
 		p.ResultsHeading = Spf("Search results for '%s':", p.SearchQuery)
 	}
@@ -165,7 +165,7 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 
 func (b *Bot) ls() (out []byte, err error) {
 	defer Return(&err)
-	nodes, err := b.g.AllNodes()
+	nodes, err := b.gf.AllNodes()
 	Ck(err)
 	for _, n := range nodes {
 		out = append(out, []byte(Spf("%s (%s) (%s)\n", n.Name, n.Id, n.MimeType))...)
@@ -176,7 +176,7 @@ func (b *Bot) ls() (out []byte, err error) {
 // return the next (unused) document number
 func (b *Bot) NextNum() (next int, err error) {
 	defer Return(&err)
-	last, err := b.g.LastNum()
+	last, err := b.gf.LastNum()
 	Ck(err)
 	next = last + 1
 	if next < b.Conf.MinNextNum {
@@ -188,7 +188,7 @@ func (b *Bot) NextNum() (next int, err error) {
 // open or create file
 func (b *Bot) opendoc(r *http.Request, template, filename, title string) (node *google.Node, err error) {
 	defer Return(&err)
-	node, err = b.g.Getnode(filename)
+	node, err = b.gf.Getnode(filename)
 	Ck(err)
 	if node == nil {
 		// file doesn't exist -- create it
@@ -204,11 +204,11 @@ func (b *Bot) mkdoc(r *http.Request, template, filename, title string) (node *go
 	defer Return(&err)
 	// get template
 	Assert(len(template) > 0)
-	tnode, err := b.g.Getnode(template)
+	tnode, err := b.gf.Getnode(template)
 	Ck(err, template)
 	Assert(tnode != nil, template)
 
-	node, err = tnode.Copy(b.g, filename, title)
+	node, err = b.gf.Copy(tnode.Id, filename)
 	Ck(err)
 
 	// XXX do the template thing here
