@@ -16,16 +16,63 @@ import (
 // regenerate testdata
 const regen bool = true
 
+const confpath = "testdata/docbot.conf"
 const credpath = "../local/mcpbot-mcpbot-key.json"
-const folderId = "1HcCIw7ppJZPD9GEHccnkgNYUwhAGCif6"
 
-func TestLs(t *testing.T) {
-	b := &Bot{
-		Ls:   true,
-		Conf: &Conf{Credpath: credpath, Folderid: folderId},
+func bot(t *testing.T) (b *Bot) {
+	b = &Bot{
+		Confpath: confpath,
+		Credpath: credpath,
 	}
 	err := b.Init()
 	Tassert(t, err == nil, err)
+	return
+}
+
+func TestMkDoc(t *testing.T) {
+	b := bot(t)
+
+	fn := "mcp-910-test10"
+
+	// clean up from previous fail
+	_ = b.gf.Rm(fn)
+	b.gf.Clearcache()
+
+	r := &http.Request{}
+	node, err := b.opendoc(r, b.Conf.Template, fn, "test 10")
+	Tassert(t, err == nil, err)
+	Tassert(t, node != nil)
+
+	err = b.gf.Rm(fn)
+	Tassert(t, err == nil, err)
+	b.gf.Clearcache()
+
+	ts := httptest.NewServer(http.HandlerFunc(b.index))
+	defer ts.Close()
+	res, err := http.Get(Spf("%s?filename=%s", ts.URL, fn))
+	Tassert(t, err == nil, err)
+	val, ok := res.Header["X-Auto-Login"]
+	Tassert(t, ok, Spf("%#v", res))
+	got := []byte(val[0])
+
+	dmp := diffmatchpatch.New()
+
+	reffn := "testdata/mkdoc.X-Auto-Login"
+	if regen {
+		err = ioutil.WriteFile(reffn, got, 0644)
+		Ck(err)
+	}
+	ref, err := ioutil.ReadFile(reffn)
+	Tassert(t, err == nil, err)
+	diffs := dmp.DiffMain(string(ref), string(got), false)
+	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
+
+	err = b.gf.Rm(fn)
+	Tassert(t, err == nil, err)
+}
+
+func TestLs(t *testing.T) {
+	b := bot(t)
 
 	got, err := b.ls()
 	Tassert(t, err == nil, err)
@@ -46,11 +93,7 @@ func TestLs(t *testing.T) {
 }
 
 func TestGetnode(t *testing.T) {
-	b := &Bot{
-		Conf: &Conf{Credpath: credpath, Folderid: folderId},
-	}
-	err := b.Init()
-	Tassert(t, err == nil, err)
+	b := bot(t)
 
 	fn := "mcp-4-why-numbered-docs"
 
@@ -61,11 +104,7 @@ func TestGetnode(t *testing.T) {
 }
 
 func TestIndex(t *testing.T) {
-	b := &Bot{
-		Conf: &Conf{Credpath: credpath, Folderid: folderId},
-	}
-	err := b.Init()
-	Tassert(t, err == nil, err)
+	b := bot(t)
 
 	// https://pkg.go.dev/net/http/httptest#NewRequest
 	// https://golang.cafe/blog/golang-httptest-example.html
@@ -92,11 +131,7 @@ func TestIndex(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
-	b := &Bot{
-		Conf: &Conf{Credpath: credpath, Folderid: folderId},
-	}
-	err := b.Init()
-	Tassert(t, err == nil, err)
+	b := bot(t)
 
 	// https://pkg.go.dev/net/http/httptest#NewRequest
 	// https://golang.cafe/blog/golang-httptest-example.html
@@ -123,11 +158,7 @@ func TestSearch(t *testing.T) {
 }
 
 func TestFilename(t *testing.T) {
-	b := &Bot{
-		Conf: &Conf{Credpath: credpath, Folderid: folderId},
-	}
-	err := b.Init()
-	Tassert(t, err == nil, err)
+	b := bot(t)
 
 	// https://pkg.go.dev/net/http/httptest#NewRequest
 	// https://golang.cafe/blog/golang-httptest-example.html

@@ -162,6 +162,8 @@ func (gf *Folder) cp(fileId, newName string) (node *Node, err error) {
 	f, err := gf.drive.Files.Copy(fileId, file).Do()
 	Ck(err)
 	node = gf.mkNode(f)
+	err = gf.cachenode(node)
+	Ck(err)
 	return
 }
 
@@ -242,6 +244,12 @@ func (gf *Folder) cachenode(node *Node) (err error) {
 	return
 }
 
+func (gf *Folder) Clearcache() {
+	gf.mu.Lock()
+	defer gf.mu.Unlock()
+	gf.clearcache()
+}
+
 func (gf *Folder) clearcache() {
 	gf.c = &cache{}
 	gf.c.nodes = []*Node{}
@@ -285,21 +293,24 @@ func (gf *Folder) queryNodes(query string) (nodes []*Node, err error) {
 	return
 }
 
-/*
-func (gf *Folder) Rm(fileId string) (err error) {
+func (gf *Folder) Rm(fn string) (err error) {
 	gf.mu.Lock()
 	defer gf.mu.Unlock()
 	defer Return(&err)
 
-	err = gf.rm(fileId)
+	err = gf.rm(fn)
 	Ck(err)
 	return
 }
-*/
 
-func (gf *Folder) rm(fileId string) (err error) {
+func (gf *Folder) rm(fn string) (err error) {
 	defer Return(&err)
-	err = gf.drive.Files.Delete(fileId).Do()
+	node, err := gf.getnode(fn)
+	Ck(err)
+	if node == nil {
+		return
+	}
+	err = gf.drive.Files.Delete(node.id).Do()
 	Ck(err)
 	return
 }

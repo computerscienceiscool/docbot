@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/stevegt/docbot/bot/google"
-	"github.com/stevegt/envi"
 	. "github.com/stevegt/goadapt"
 )
 
@@ -32,7 +31,6 @@ func logw(args ...interface{}) {
 }
 
 type Conf struct {
-	Credpath        string
 	Folderid        string
 	Docprefix       string
 	Template        string
@@ -42,16 +40,21 @@ type Conf struct {
 }
 
 type Bot struct {
-	Ls    bool
-	Put   bool
-	Serve bool
-	Conf  *Conf
-	gf    *google.Folder
+	Ls       bool
+	Put      bool
+	Serve    bool
+	Confpath string
+	Credpath string
+	Conf     *Conf
+	gf       *google.Folder
 }
 
 func (b *Bot) Init() (err error) {
 
-	cbuf, err := ioutil.ReadFile(b.Conf.Credpath)
+	err = b.LoadConf(b.Confpath)
+	Ck(err)
+
+	cbuf, err := ioutil.ReadFile(b.Credpath)
 	Ck(err)
 
 	b.gf, err = google.NewFolder(cbuf, b.Conf.Folderid, b.Conf.Docprefix)
@@ -60,9 +63,8 @@ func (b *Bot) Init() (err error) {
 	return
 }
 
-func (b *Bot) LoadConf() (err error) {
+func (b *Bot) LoadConf(fn string) (err error) {
 	defer Return(&err)
-	fn := envi.String("DOCBOT_CONF", ".docbot.conf")
 	buf, err := ioutil.ReadFile(fn)
 	Ck(err)
 	conf := &Conf{}
@@ -75,8 +77,6 @@ func (b *Bot) LoadConf() (err error) {
 func (b *Bot) Run() (res []byte, err error) {
 	defer Return(&err)
 
-	err = b.LoadConf()
-	Ck(err)
 	err = b.Init()
 	Ck(err)
 
@@ -132,6 +132,7 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 
 	fn := r.Form.Get("filename")
 	if fn != "" {
+		b.gf.Clearcache()
 		var node *google.Node
 		node, err = b.opendoc(r, b.Conf.Template, fn, title)
 		ckw(w, err)
@@ -191,7 +192,7 @@ func (b *Bot) opendoc(r *http.Request, template, filename, title string) (node *
 	defer Return(&err)
 	node, err = b.gf.Getnode(filename)
 	Ck(err)
-	if len(node.Id()) == 0 {
+	if node == nil {
 		// file doesn't exist -- create it
 		node, err = b.mkdoc(r, template, filename, title)
 		Ck(err)

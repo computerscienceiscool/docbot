@@ -5,6 +5,7 @@ import (
 
 	"github.com/docopt/docopt-go"
 	"github.com/stevegt/docbot/bot"
+	"github.com/stevegt/envi"
 	. "github.com/stevegt/goadapt"
 )
 
@@ -27,6 +28,8 @@ func main() {
 	var b bot.Bot
 	err = o.Bind(&b)
 	Ck(err)
+	b.Confpath = envi.String("DOCBOT_CONF", ".docbot.conf")
+	b.Credpath = envi.String("DOCBOT_CRED", ".docbot.cred")
 	res, err := b.Run()
 	Ck(err)
 	Pl(res)

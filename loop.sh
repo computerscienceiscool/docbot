@@ -15,6 +15,7 @@ winid=$(getwinid)
 base=$PWD
 
 export DOCBOT_CONF=bot/testdata/docbot.conf
+export DOCBOT_CRED=local/mcpbot-mcpbot-key.json
 
 set -x
 while true
@@ -26,14 +27,14 @@ do
 	killpid
 	sleep 1
 	go vet ./... || continue
+	wmctrl -ia $winid
 	padsp signalgen -t 100m sin 330 # E 
 	cd bot
-	if ! go test -v 
-	then
-		wmctrl -ia $winid
-		continue
-	fi
+	go test -v -coverprofile=/tmp/got.out -coverpkg=./... || continue
 	padsp signalgen -t 100m sin 392 # G
+	goenv exec go tool cover -html=/tmp/got.out -o /tmp/got.html
+	xdg-open /tmp/got.html
+	sleep 1
 	cd $base
 	go run . serve &
 	sleep 2
