@@ -14,7 +14,7 @@ import (
 )
 
 // regenerate testdata
-const regen bool = false
+const regen bool = true
 
 const credpath = "../local/mcpbot-mcpbot-key.json"
 const folderId = "1HcCIw7ppJZPD9GEHccnkgNYUwhAGCif6"
@@ -43,6 +43,21 @@ func TestLs(t *testing.T) {
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(string(ref), string(got), false)
 	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
+}
+
+func TestGetnode(t *testing.T) {
+	b := &Bot{
+		Conf: &Conf{Credpath: credpath, Folderid: folderId},
+	}
+	err := b.Init()
+	Tassert(t, err == nil, err)
+
+	fn := "mcp-4-why-numbered-docs"
+
+	node, err := b.gf.Getnode(fn)
+	Tassert(t, err == nil, err)
+	Tassert(t, node != nil, Spf("%#v", node))
+	Tassert(t, len(node.Id()) != 0, Spf("%#v", node))
 }
 
 func TestIndex(t *testing.T) {
@@ -121,7 +136,7 @@ func TestFilename(t *testing.T) {
 	res, err := http.Get(Spf("%s?filename=mcp-4-why-numbered-docs", ts.URL))
 	Tassert(t, err == nil, err)
 	val, ok := res.Header["X-Auto-Login"]
-	Tassert(t, ok, res.Header)
+	Tassert(t, ok, Spf("%#v", res))
 	got := []byte(val[0])
 
 	dmp := diffmatchpatch.New()

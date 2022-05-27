@@ -34,6 +34,7 @@ func logw(args ...interface{}) {
 type Conf struct {
 	Credpath        string
 	Folderid        string
+	Docprefix       string
 	Template        string
 	SessionTemplate string
 	Url             string
@@ -53,7 +54,7 @@ func (b *Bot) Init() (err error) {
 	cbuf, err := ioutil.ReadFile(b.Conf.Credpath)
 	Ck(err)
 
-	b.gf, err = google.NewFolder(cbuf, b.Conf.Folderid)
+	b.gf, err = google.NewFolder(cbuf, b.Conf.Folderid, b.Conf.Docprefix)
 	Ck(err)
 
 	return
@@ -107,7 +108,7 @@ func (b *Bot) serve() {
 }
 
 type Page struct {
-	Nodes          []google.Node
+	Nodes          []*google.Node
 	YYYY           string
 	NextNum        int
 	URL            string
@@ -134,7 +135,7 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 		var node *google.Node
 		node, err = b.opendoc(r, b.Conf.Template, fn, title)
 		ckw(w, err)
-		http.Redirect(w, r, node.URL, http.StatusFound)
+		http.Redirect(w, r, node.URL(), http.StatusFound)
 		return
 	}
 
@@ -168,7 +169,7 @@ func (b *Bot) ls() (out []byte, err error) {
 	nodes, err := b.gf.AllNodes()
 	Ck(err)
 	for _, n := range nodes {
-		out = append(out, []byte(Spf("%s (%s) (%s)\n", n.Name, n.Id, n.MimeType))...)
+		out = append(out, []byte(Spf("%s (%s) (%s)\n", n.Name(), n.Id(), n.MimeType()))...)
 	}
 	return
 }
@@ -190,7 +191,7 @@ func (b *Bot) opendoc(r *http.Request, template, filename, title string) (node *
 	defer Return(&err)
 	node, err = b.gf.Getnode(filename)
 	Ck(err)
-	if node == nil {
+	if len(node.Id()) == 0 {
 		// file doesn't exist -- create it
 		node, err = b.mkdoc(r, template, filename, title)
 		Ck(err)
@@ -208,7 +209,7 @@ func (b *Bot) mkdoc(r *http.Request, template, filename, title string) (node *go
 	Ck(err, template)
 	Assert(tnode != nil, template)
 
-	node, err = b.gf.Copy(tnode.Id, filename)
+	node, err = b.gf.Copy(tnode.Id(), filename)
 	Ck(err)
 
 	// XXX do the template thing here
