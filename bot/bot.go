@@ -213,7 +213,19 @@ func (b *Bot) mkdoc(r *http.Request, template, filename, title string) (node *go
 	node, err = b.gf.Copy(tnode.Id(), filename)
 	Ck(err)
 
-	// XXX do the template thing here
+	replace := map[string]string{
+		"NAME":  filename,
+		"TITLE": title,
+		// XXX
+		// "SESSION_DATE": XXX,
+		// "SESSION_SPEAKERS": XXX,
+	}
+	res, err := b.gf.ReplaceText(node.Id(), replace)
+	Ck(err)
+	Pl(res)
+
+	// var unlock_url = self_url + "?unlock=t&filename=" + filename
+	// replaceWithUrl(body, "UNLOCK_URL", "http://bit.ly/mcp-index", unlock_url);
 
 	return
 }

@@ -293,6 +293,29 @@ func (gf *Folder) queryNodes(query string) (nodes []*Node, err error) {
 	return
 }
 
+func (gf *Folder) ReplaceText(docId string, replaceParams map[string]string) (res *docs.BatchUpdateDocumentResponse, err error) {
+	gf.mu.Lock()
+	defer gf.mu.Unlock()
+	defer Return(&err)
+
+	requests := make([]*docs.Request, 0)
+	for k, v := range replaceParams {
+		requests = append(requests, &docs.Request{
+			ReplaceAllText: &docs.ReplaceAllTextRequest{
+				ContainsText: &docs.SubstringMatchCriteria{
+					MatchCase: true,
+					Text:      k,
+				},
+				ReplaceText: v,
+			},
+		})
+	}
+	update := &docs.BatchUpdateDocumentRequest{Requests: requests}
+	res, err = gf.docs.Documents.BatchUpdate(docId, update).Do()
+	Ck(err)
+	return
+}
+
 func (gf *Folder) Rm(fn string) (err error) {
 	gf.mu.Lock()
 	defer gf.mu.Unlock()
