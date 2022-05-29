@@ -1,0 +1,35 @@
+Name: mcp-910-test10
+Title: test 10
+Status: This document is a collaborative draft and can be edited by anyone.
+
+See the MCP index to create or find documents, or mcp-0-readme for an overview.  
+The headers above are machine-readable; please preserve format.
+
+
+
+Suggested content for meeting notes:
+
+Meeting title
+date, time (include timezone)
+place or call-in info
+
+Link to previous meeting doc
+
+Link to A/V recording of this meeting, if any
+
+Attendees list
+
+Agenda
+live notes
+Questions
+Q1
+A1
+Q2
+A2
+
+
+
+Suggested content for project or working group:
+
+See mcp-19, mcp-20, or mcp-20 for some ideas.  
+

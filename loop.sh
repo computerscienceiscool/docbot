@@ -20,27 +20,29 @@ export DOCBOT_CRED=local/mcpbot-mcpbot-key.json
 set -x
 while true
 do
-	padsp signalgen -t 100m sin 523 # C
+	padsp signalgen -t 100m sin 523 # C5
 	cd $base
+	echo =======================
 	inotifywait -r -e modify *
-	padsp signalgen -t 100m sin 262 # C
+	padsp signalgen -t 100m sin 262 # C4
 	killpid
 	sleep 1
 	go vet ./... || continue
 	wmctrl -ia $winid
-	padsp signalgen -t 100m sin 330 # E 
+	padsp signalgen -t 100m sin 330 # E4 
 	cd bot
-	go test -v -coverprofile=/tmp/got.out -coverpkg=./... || continue
-	padsp signalgen -t 100m sin 392 # G
+	go test -v ./... -coverprofile=/tmp/got.out -coverpkg=./... || continue
+	padsp signalgen -t 100m sin 392 # G4
 	goenv exec go tool cover -html=/tmp/got.out -o /tmp/got.html
 	xdg-open /tmp/got.html
 	sleep 1
 	cd $base
 	go run . serve &
-	sleep 2
+	sleep 3
 	if ! kill -0 $(cat $pidfn) 
 	then
-		padsp signalgen -t 100m sin 262
+		echo "FAIL server start"
+		padsp signalgen -t 100m sin 220 # A3
 		wmctrl -ia $winid
 		continue
 	fi

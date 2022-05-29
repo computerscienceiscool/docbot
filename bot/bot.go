@@ -34,7 +34,7 @@ type Conf struct {
 	Folderid        string
 	Docprefix       string
 	Template        string
-	SessionTemplate string
+	SessionTemplate string `json:"session_template"`
 	Url             string
 	MinNextNum      int
 }
@@ -128,13 +128,21 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	ckw(w, err)
 
-	title := r.Form.Get("title")
-
+	var tmpl string
+	var ofn string
 	fn := r.Form.Get("filename")
+	sfn := r.Form.Get("session_filename")
 	if fn != "" {
+		ofn = fn
+		tmpl = b.Conf.Template
+	} else if sfn != "" {
+		ofn = sfn
+		tmpl = b.Conf.SessionTemplate
+	}
+	if tmpl != "" {
 		b.gf.Clearcache()
 		var node *google.Node
-		node, err = b.opendoc(r, b.Conf.Template, fn, title)
+		node, err = b.opendoc(r, tmpl, ofn)
 		ckw(w, err)
 		http.Redirect(w, r, node.URL(), http.StatusFound)
 		return
@@ -188,21 +196,21 @@ func (b *Bot) NextNum() (next int, err error) {
 }
 
 // open or create file
-func (b *Bot) opendoc(r *http.Request, template, filename, title string) (node *google.Node, err error) {
+func (b *Bot) opendoc(r *http.Request, template, filename string) (node *google.Node, err error) {
 	defer Return(&err)
 	node, err = b.gf.Getnode(filename)
 	Ck(err)
 	if node == nil {
 		// file doesn't exist -- create it
-		node, err = b.mkdoc(r, template, filename, title)
+		node, err = b.mkdoc(r, template, filename)
 		Ck(err)
-		Assert(node != nil, "%s, %s, %s", template, filename, title)
+		Assert(node != nil, "%s, %s, %s", template, filename, r.Form.Get("title"))
 	}
 	return
 }
 
 // create file
-func (b *Bot) mkdoc(r *http.Request, template, filename, title string) (node *google.Node, err error) {
+func (b *Bot) mkdoc(r *http.Request, template, filename string) (node *google.Node, err error) {
 	defer Return(&err)
 	// get template
 	Assert(len(template) > 0)
@@ -213,17 +221,31 @@ func (b *Bot) mkdoc(r *http.Request, template, filename, title string) (node *go
 	node, err = b.gf.Copy(tnode.Id(), filename)
 	Ck(err)
 
-	replace := map[string]string{
-		"NAME":  filename,
-		"TITLE": title,
-		// XXX
-		// "SESSION_DATE": XXX,
-		// "SESSION_SPEAKERS": XXX,
-	}
-	res, err := b.gf.ReplaceText(node.Id(), replace)
-	Ck(err)
-	Pl(res)
+	title := r.Form.Get("title")
+	date := r.Form.Get("session_date")
+	speakers := r.Form.Get("session_speakers")
 
+	if len(title) == 0 {
+		// XXX handle
+		log.Printf("missing title: %s, %v", r.URL, r.Form)
+	}
+
+	// Pprint(r.Form)
+	// Pl("salkdfj", title, speakers, date)
+
+	replace := map[string]string{
+		"NAME":             filename,
+		"TITLE":            title,
+		"SESSION_DATE":     date,
+		"SESSION_SPEAKERS": speakers,
+	}
+	res, err := b.gf.ReplaceText(node, replace)
+	Ck(err)
+
+	// Pprint(res)
+	_ = res
+
+	// XXX
 	// var unlock_url = self_url + "?unlock=t&filename=" + filename
 	// replaceWithUrl(body, "UNLOCK_URL", "http://bit.ly/mcp-index", unlock_url);
 

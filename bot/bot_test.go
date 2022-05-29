@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	// "github.com/sergi/go-diff/diffmatchpatch"
@@ -19,45 +20,138 @@ const regen bool = true
 const confpath = "testdata/docbot.conf"
 const credpath = "../local/mcpbot-mcpbot-key.json"
 
-func bot(t *testing.T) (b *Bot) {
+func setup(t *testing.T) (b *Bot) {
 	b = &Bot{
 		Confpath: confpath,
 		Credpath: credpath,
 	}
 	err := b.Init()
 	Tassert(t, err == nil, err)
+	cleanup(t, b)
 	return
 }
 
+func cleanup(t *testing.T, b *Bot) {
+	// clean up from previous fail
+	nodes, err := b.gf.AllNodes()
+	Ck(err)
+	for _, node := range nodes {
+		if node.Num() >= 900 {
+			err = b.gf.Rm(node.Name())
+			Tassert(t, err == nil, Spf("%v: %v", node.Name(), err))
+		}
+	}
+	b.gf.Clearcache()
+}
+
+/*
+func TestMain(m *testing.M) {
+	setup()
+	code := m.Run()
+	teardown()
+	os.Exit(code)
+}
+*/
+
 func TestMkDoc(t *testing.T) {
-	b := bot(t)
+	b := setup(t)
 
 	fn := "mcp-910-test10"
+	title := "test 10"
 
-	// clean up from previous fail
-	_ = b.gf.Rm(fn)
-	b.gf.Clearcache()
+	ts := httptest.NewServer(http.HandlerFunc(b.index))
+	defer ts.Close()
 
-	r := &http.Request{}
-	node, err := b.opendoc(r, b.Conf.Template, fn, "test 10")
+	v := url.Values{}
+	v.Set("filename", fn)
+	v.Set("title", title)
+	url := Spf("%s?%s", ts.URL, v.Encode())
+
+	r, err := http.NewRequest("GET", url, nil)
+	Tassert(t, err == nil, err)
+	err = r.ParseForm()
+	Tassert(t, err == nil, err)
+
+	// test opendoc directly
+	node, err := b.opendoc(r, b.Conf.Template, fn)
 	Tassert(t, err == nil, err)
 	Tassert(t, node != nil)
 
+	// check title in body
+	h, err := b.gf.GetHeaders(node)
+	Tassert(t, err == nil, err)
+	gotTitle, ok := h["Title"]
+	Tassert(t, ok, Spf("%#v", h))
+	// Pprint(h)
+	Tassert(t, gotTitle == title, gotTitle)
+
+	// clean up
 	err = b.gf.Rm(fn)
 	Tassert(t, err == nil, err)
 	b.gf.Clearcache()
 
-	ts := httptest.NewServer(http.HandlerFunc(b.index))
-	defer ts.Close()
-	res, err := http.Get(Spf("%s?filename=%s", ts.URL, fn))
+	// create via mock docbot server
+	_, err = http.Get(url)
 	Tassert(t, err == nil, err)
-	val, ok := res.Header["X-Auto-Login"]
-	Tassert(t, ok, Spf("%#v", res))
-	got := []byte(val[0])
+
+	// get document text
+	node, err = b.gf.Getnode(fn)
+	Tassert(t, err == nil, err)
+	Tassert(t, node != nil, Spf("%#v", node))
+	txt, err := b.gf.Doc2txt(node)
+	Tassert(t, err == nil, err)
+	got := []byte(txt)
 
 	dmp := diffmatchpatch.New()
 
-	reffn := "testdata/mkdoc.X-Auto-Login"
+	reffn := "testdata/mkdoc.txt"
+	if regen {
+		err = ioutil.WriteFile(reffn, got, 0644)
+		Ck(err)
+	}
+	ref, err := ioutil.ReadFile(reffn)
+	Tassert(t, err == nil, err)
+	diffs := dmp.DiffMain(string(ref), string(got), false)
+	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
+}
+
+func TestMkSessionDoc(t *testing.T) {
+	b := setup(t)
+
+	fn := "mcp-911-test11"
+	title := "test 11"
+	date := "02 Jan 2006"
+	speakers := "Alice Arms, Bob Barker, Carol Carnes"
+
+	ts := httptest.NewServer(http.HandlerFunc(b.index))
+	defer ts.Close()
+
+	v := url.Values{}
+	v.Set("title", title)
+	v.Set("session_filename", fn)
+	v.Set("session_date", date)
+	v.Set("session_speakers", speakers)
+	url := Spf("%s?%s", ts.URL, v.Encode())
+
+	// create via mock docbot server
+	_, err := http.Get(url)
+	Tassert(t, err == nil, err)
+
+	// Pprint(url)
+	// Pprint(res.Status)
+	// Pprint(res.Header)
+
+	// get document text
+	node, err := b.gf.Getnode(fn)
+	Tassert(t, err == nil, err)
+	Tassert(t, node != nil, Spf("%#v", node))
+	txt, err := b.gf.Doc2txt(node)
+	Tassert(t, err == nil, err)
+	got := []byte(txt)
+
+	dmp := diffmatchpatch.New()
+
+	reffn := "testdata/mksessiondoc.txt"
 	if regen {
 		err = ioutil.WriteFile(reffn, got, 0644)
 		Ck(err)
@@ -72,7 +166,7 @@ func TestMkDoc(t *testing.T) {
 }
 
 func TestLs(t *testing.T) {
-	b := bot(t)
+	b := setup(t)
 
 	got, err := b.ls()
 	Tassert(t, err == nil, err)
@@ -93,7 +187,7 @@ func TestLs(t *testing.T) {
 }
 
 func TestGetnode(t *testing.T) {
-	b := bot(t)
+	b := setup(t)
 
 	fn := "mcp-4-why-numbered-docs"
 
@@ -104,7 +198,7 @@ func TestGetnode(t *testing.T) {
 }
 
 func TestIndex(t *testing.T) {
-	b := bot(t)
+	b := setup(t)
 
 	// https://pkg.go.dev/net/http/httptest#NewRequest
 	// https://golang.cafe/blog/golang-httptest-example.html
@@ -131,7 +225,7 @@ func TestIndex(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
-	b := bot(t)
+	b := setup(t)
 
 	// https://pkg.go.dev/net/http/httptest#NewRequest
 	// https://golang.cafe/blog/golang-httptest-example.html
@@ -158,29 +252,68 @@ func TestSearch(t *testing.T) {
 }
 
 func TestFilename(t *testing.T) {
-	b := bot(t)
+	b := setup(t)
+
+	fn := "mcp-1-repository-github"
 
 	// https://pkg.go.dev/net/http/httptest#NewRequest
 	// https://golang.cafe/blog/golang-httptest-example.html
 	ts := httptest.NewServer(http.HandlerFunc(b.index))
 	defer ts.Close()
-	res, err := http.Get(Spf("%s?filename=mcp-4-why-numbered-docs", ts.URL))
+
+	v := url.Values{}
+	v.Set("filename", fn)
+	url := Spf("%s?%s", ts.URL, v.Encode())
+
+	_, err := http.Get(url)
 	Tassert(t, err == nil, err)
-	val, ok := res.Header["X-Auto-Login"]
-	Tassert(t, ok, Spf("%#v", res))
-	got := []byte(val[0])
+
+	// get document text
+	node, err := b.gf.Getnode(fn)
+	Tassert(t, err == nil, err)
+	Tassert(t, node != nil, Spf("%#v", node))
+	txt, err := b.gf.Doc2txt(node)
+	Tassert(t, err == nil, err)
+	got := []byte(txt)
 
 	dmp := diffmatchpatch.New()
 
-	fn := "testdata/filename.X-Auto-Login"
+	reffn := "testdata/filename.txt"
 	if regen {
-		err = ioutil.WriteFile(fn, got, 0644)
+		err = ioutil.WriteFile(reffn, got, 0644)
 		Ck(err)
 	}
-	ref, err := ioutil.ReadFile(fn)
+	ref, err := ioutil.ReadFile(reffn)
 	Tassert(t, err == nil, err)
 	diffs := dmp.DiffMain(string(ref), string(got), false)
 	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
+}
+
+func TestText(t *testing.T) {
+	b := setup(t)
+
+	fn := "mcp-4-why-numbered-docs"
+
+	node, err := b.gf.Getnode(fn)
+	Tassert(t, err == nil, err)
+	Tassert(t, node != nil, Spf("%#v", node))
+
+	txt, err := b.gf.Doc2txt(node)
+	Tassert(t, err == nil, err)
+	got := []byte(txt)
+
+	dmp := diffmatchpatch.New()
+
+	reffn := "testdata/doc2txt.txt"
+	if regen {
+		err = ioutil.WriteFile(reffn, []byte(got), 0644)
+		Ck(err)
+	}
+	ref, err := ioutil.ReadFile(reffn)
+	Tassert(t, err == nil, err)
+	diffs := dmp.DiffMain(string(ref), string(got), false)
+	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
+
 }
 
 /*

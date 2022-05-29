@@ -2,6 +2,8 @@ module github.com/stevegt/docbot
 
 go 1.17
 
+// replace github.com/stevegt/goadapt => /home/stevegt/lab/goadapt
+
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/sergi/go-diff v1.2.0

@@ -1,0 +1,17 @@
+Name: mcp-4-why-numbered-docs
+Title: A discussion of why we use numbered documents instead of name/version pairs
+Status: This document is a collaborative draft and can be edited by anyone.
+Reviewers: Steve Traugott
+Freeze date: TBD
+Release date: TBD
+
+Like a host running an update tool, an organization is self-modifying code.  Avoiding the pitfalls of self-modifying code means keeping things simple and purposely crippling what the code can do.  Some system update tools, for example, avoid some of the pitfalls of self-modifying code by maintaining an "active" and "rollback" image.  
+
+The IETF RFCs use a similar mechanism; an RFC is frozen at release.  Any revisions to a released document are made in a completely new numbered document that is not yet active.
+This freeze-and-replace cycle ensures that the RFCs that govern the organization itself are always clear and immutable.
+
+Cognitively, discussions about a new document are more obvious, because the document carries an entirely new number.  Only the new number needs to be referenced in conversation, rather than a name/version pair.  
+
+Because each RFC is typically discrete and narrowly-focused, one operating procedure can be updated by a new RFC without affecting any others.   Likewise, RFCs can be split, merged, and otherwise refactored in ways that would break links in a conventional web-based document repository.
+
+Much of this can of course be done in other ways using a modern DVCS; the organization could run on a 'master' branch, for instance, with pulls of individual documents as they are revised on other branches, but that loses the clear distinction of having an entirely new document number to make changes obvious and references atomic.  Splits and merges will break links, and grokking history is a little harder, because you need to reference both document name and version number, as opposed to knowing just the name of a numbered document.

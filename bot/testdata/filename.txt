@@ -1,0 +1,16 @@
+Name: mcp-1-repository-github
+Title: MCP Repository Plan, github variant
+Status: This document is a collaborative draft and can be edited by anyone.
+Reviewers: Steve Traugott
+Freeze date: TBD
+Release date: TBD
+
+We start the MCP series in Google Docs; this is where the bulk of the community already is.
+We migrate the repository out of Google Docs and into a git repository by (date).
+We MAY use gdocs2md or equivalent to do the format conversion: https://github.com/mangini/gdocs2md	
+We SHOULD use a script similar to ‘gitdriver’ to export revision history for each doc: 
+https://github.com/larsks/gitdriver
+http://stackoverflow.com/questions/14222090/how-do-i-export-the-revision-history-of-a-gdoc-to-git
+We push a copy of the git repository to the nation-of-makers github account by (date).
+We SHOULD arrange the repo such that it is editable via github’s wiki interface.
+We SHOULD set up a bot to autoregister collaborators for the repository (e.g. in response to an issue or a slack channel request), rather than leave the wiki publically editable.

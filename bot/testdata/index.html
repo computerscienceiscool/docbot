@@ -54,7 +54,7 @@
                                             <td><input type="text" id="session_year" name="session_year" size=6 value="2022"></td>
                                         </tr>
                                         <tr><td align="right">Session title:</td><td><input type="text" id="session_title" name="session_title" size=80></td></tr>
-                                        <tr><td align="right">Filename:</td><td><input type="text" id="session_filename" name="session_filename" size=80 value="mcp-902"></td></tr>
+                                        <tr><td align="right">Filename:</td><td><input type="text" id="session_filename" name="session_filename" size=80 value="mcp-6"></td></tr>
 
                                         <tr><td colspan=2 align=center><input type="submit" value="Create session doc"></td></tr>
 
@@ -68,7 +68,7 @@
                                     <form action="http://localhost:8080" method='get'>
                                         <table border=0 cellspacing=0 cellpadding=10>
                                             <tr><td>Document title (a few words):</td><td><input type="text" id="title" name="title" size=40></td></tr>
-                                            <tr><td align="right">Filename:</td><td><input type="text" id="filename" name="filename" size=40 value="mcp-902"></td></tr>
+                                            <tr><td align="right">Filename:</td><td><input type="text" id="filename" name="filename" size=40 value="mcp-6"></td></tr>
                                             <tr><td colspan=2 align=center><input type="submit" value="Create doc"></td></tr>
                                         </table>
                                     </form>
@@ -92,14 +92,6 @@
                 <table border=0 cellspacing=0 cellpadding=5 width=100%>
                     <tr><th colspan=5 border=1 align="left"><h3>All documents:</h3></th></tr>
                     <tr><th>Access</th><th>Perms</th><th>Created</th><th>Filename</th><th>Title</th></tr>
-
-                    <tr>
-                        <td></td>
-                        <td></td>
-                        <td>2022-05-23T04:03:02.738Z</td>
-                        <td> <a href='https://docs.google.com/document/d/1uG4eqdCEueDvFg1xRosXLJl-n1H-CTqHhOU67VUwWuc/edit?usp=drivesdk'>mcp-901-test1</a> </td>
-                        <td></td>
-                    </tr>
 
                     <tr>
                         <td></td>
@@ -172,13 +164,13 @@
                                         filename_field.addEventListener('input', update_filename);
 
                                         function input_session_title(event) {
-                                                                var filename = "mcp-" +  902  + "-nomcon-" + year_field.value + "-" + session_title_field.value;
+                                                                var filename = "mcp-" +  6  + "-nomcon-" + year_field.value + "-" + session_title_field.value;
                                                                 session_filename_field.value = filename;
                                                                 update_filename(session_filename_field, event);
                                                             }
 
                                         function input_title(event) {
-                                                                var filename = "mcp-" +  902  + "-" + title_field.value;
+                                                                var filename = "mcp-" +  6  + "-" + title_field.value;
                                                                 filename_field.value = filename;
                                                                 update_filename(filename_field, event);
                                                             }
@@ -186,7 +178,7 @@
                                         function update_filename(field, event) {
                                                                 var filename = field.value;
                                                                 var m = filename.match(/^mcp-(\d+)/);
-                                                                if (!m || m[1] !=  902 ) filename = "mcp-" +  902 ;
+                                                                if (!m || m[1] !=  6 ) filename = "mcp-" +  6 ;
                                                                 filename = filename.toLowerCase();
                                                                 filename = filename.replace(/\W/g, '-');
                                                                 filename = filename.replace(/-+/g, '-');

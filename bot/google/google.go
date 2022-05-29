@@ -6,6 +6,7 @@ import (
 	"log"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,6 +34,8 @@ architecture:
 	  cache as needed
 
 */
+
+var headre = regexp.MustCompile(`^(\w+):\s+(.*)`)
 
 type Node struct {
 	file     *drive.File
@@ -149,7 +152,6 @@ func (gf *Folder) Copy(fileId, newName string) (node *Node, err error) {
 	gf.mu.Lock()
 	defer gf.mu.Unlock()
 	defer Return(&err)
-
 	node, err = gf.cp(fileId, newName)
 	Ck(err)
 	return
@@ -164,6 +166,40 @@ func (gf *Folder) cp(fileId, newName string) (node *Node, err error) {
 	node = gf.mkNode(f)
 	err = gf.cachenode(node)
 	Ck(err)
+	return
+}
+
+func (gf *Folder) Doc2txt(node *Node) (txt string, err error) {
+	gf.mu.Lock()
+	defer gf.mu.Unlock()
+	defer Return(&err)
+	txt, err = gf.doc2txt(node)
+	Ck(err)
+	return
+}
+
+func (gf *Folder) doc2txt(node *Node) (txt string, err error) {
+	defer Return(&err)
+	// https://github.com/rsbh/doc2md/blob/a740060638ca55813c25c7e4a6cf7774e3cbd63f/pkg/transformer/doc2json.go#L368
+	// XXX fetch doc in mkNode
+	// XXX move node stuff to Node, include gf in struct
+	doc, err := gf.docs.Documents.Get(node.Id()).Do()
+	Ck(err)
+	b := doc.Body
+	// Pprint(b.Content)
+	// iterate over elements
+	for _, s := range b.Content {
+		if s.Paragraph != nil {
+			for _, el := range s.Paragraph.Elements {
+				if el.TextRun != nil {
+					content := el.TextRun.Content
+					txt += content
+				}
+			}
+		}
+	}
+	// replace line tabulation unicode chars with newline
+	txt = strings.ReplaceAll(txt, "\u000b", "\n")
 	return
 }
 
@@ -222,6 +258,37 @@ func (gf *Folder) lastNum() (last int, err error) {
 	_, err = gf.allNodes()
 	Ck(err)
 	last = gf.c.lastNum
+	return
+}
+
+func (gf *Folder) GetHeaders(node *Node) (h map[string]string, err error) {
+	gf.mu.Lock()
+	defer gf.mu.Unlock()
+	defer Return(&err)
+	h, err = gf.getHeaders(node)
+	Ck(err)
+	return
+}
+
+func (gf *Folder) getHeaders(node *Node) (h map[string]string, err error) {
+	defer Return(&err)
+	h = make(map[string]string)
+	txt, err := gf.doc2txt(node)
+	Ck(err)
+	lines := strings.Split(txt, "\n")
+	for _, line := range lines {
+		if line == "" {
+			break
+		}
+		m := headre.FindStringSubmatch(line)
+		if m == nil {
+			// XXX handle?
+			Pl("unmatched header line:", line)
+			continue
+		}
+		Assert(len(m) == 3)
+		h[m[1]] = m[2]
+	}
 	return
 }
 
@@ -293,9 +360,16 @@ func (gf *Folder) queryNodes(query string) (nodes []*Node, err error) {
 	return
 }
 
-func (gf *Folder) ReplaceText(docId string, replaceParams map[string]string) (res *docs.BatchUpdateDocumentResponse, err error) {
+func (gf *Folder) ReplaceText(node *Node, replaceParams map[string]string) (res *docs.BatchUpdateDocumentResponse, err error) {
 	gf.mu.Lock()
 	defer gf.mu.Unlock()
+	defer Return(&err)
+	res, err = gf.replaceText(node, replaceParams)
+	Ck(err)
+	return
+}
+
+func (gf *Folder) replaceText(node *Node, replaceParams map[string]string) (res *docs.BatchUpdateDocumentResponse, err error) {
 	defer Return(&err)
 
 	requests := make([]*docs.Request, 0)
@@ -311,7 +385,7 @@ func (gf *Folder) ReplaceText(docId string, replaceParams map[string]string) (re
 		})
 	}
 	update := &docs.BatchUpdateDocumentRequest{Requests: requests}
-	res, err = gf.docs.Documents.BatchUpdate(docId, update).Do()
+	res, err = gf.docs.Documents.BatchUpdate(node.id, update).Do()
 	Ck(err)
 	return
 }
@@ -465,6 +539,40 @@ func (gf *Folder) run() (requests chan request) {
 		}
 	}()
 
+	return
+}
+*/
+
+/*
+	// https://github.com/rsbh/doc2md/blob/a740060638ca55813c25c7e4a6cf7774e3cbd63f/pkg/transformer/doc2json.go#L368
+	// XXX fetch doc in mkNode
+	// XXX move node stuff to Node, include gf in struct
+	doc, err := gf.docs.Documents.Get(node.Id()).Do()
+	Ck(err)
+	b := doc.Body
+	// iterate over elements
+loop:
+	for _, s := range b.Content {
+		if s.Paragraph != nil {
+			for _, el := range s.Paragraph.Elements {
+				if el.TextRun != nil {
+					content := el.TextRun.Content
+					if content == "\n" {
+						break loop
+					}
+					m := headre.FindStringSubmatch(content)
+					if m == nil {
+						// XXX handle?
+						Pl("unmatched header line:", content)
+						Pprint(s)
+						continue
+					}
+					Assert(len(m) == 3)
+					h[m[1]] = m[2]
+				}
+			}
+		}
+	}
 	return
 }
 */
