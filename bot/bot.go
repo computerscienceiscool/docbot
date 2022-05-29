@@ -30,6 +30,15 @@ func logw(args ...interface{}) {
 	log.Printf("%v: %v", r.(error).Error(), msg)
 }
 
+type Doc interface {
+	Created() string
+	Id() string
+	MimeType() string
+	Name() string
+	Num() int
+	URL() string
+}
+
 type Conf struct {
 	Folderid        string
 	Docprefix       string
@@ -46,7 +55,7 @@ type Bot struct {
 	Confpath string
 	Credpath string
 	Conf     *Conf
-	gf       *google.Folder
+	repo     *google.Folder
 }
 
 func (b *Bot) Init() (err error) {
@@ -57,7 +66,7 @@ func (b *Bot) Init() (err error) {
 	cbuf, err := ioutil.ReadFile(b.Credpath)
 	Ck(err)
 
-	b.gf, err = google.NewFolder(cbuf, b.Conf.Folderid, b.Conf.Docprefix)
+	b.repo, err = google.NewFolder(cbuf, b.Conf.Folderid, b.Conf.Docprefix, 900)
 	Ck(err)
 
 	return
@@ -124,6 +133,8 @@ func render(w http.ResponseWriter, name string, p *Page) {
 
 func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 	defer logw(r.URL)
+	tx := b.repo.StartTransaction()
+	defer tx.Close()
 
 	err := r.ParseForm()
 	ckw(w, err)
@@ -140,9 +151,8 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 		tmpl = b.Conf.SessionTemplate
 	}
 	if tmpl != "" {
-		b.gf.Clearcache()
 		var node *google.Node
-		node, err = b.opendoc(r, tmpl, ofn)
+		node, err = tx.Opendoc(r, tmpl, ofn)
 		ckw(w, err)
 		http.Redirect(w, r, node.URL(), http.StatusFound)
 		return
@@ -155,17 +165,17 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 
 	p.SearchQuery = r.Form.Get("query")
 	if p.SearchQuery == "" {
-		p.Nodes, err = b.gf.AllNodes()
+		p.Nodes, err = tx.AllNodes()
 		ckw(w, err)
 		p.ResultsHeading = "All documents:"
 	} else {
 		q := Spf("fullText contains '%s'", p.SearchQuery)
-		p.Nodes, err = b.gf.FindNodes(q)
+		p.Nodes, err = tx.FindNodes(q)
 		ckw(w, err)
 		p.ResultsHeading = Spf("Search results for '%s':", p.SearchQuery)
 	}
 
-	p.NextNum, err = b.NextNum()
+	p.NextNum, err = tx.NextNum()
 	ckw(w, err)
 
 	render(w, "index", p)
@@ -173,82 +183,28 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// get document text
+func (b *Bot) getText(fn string) (txt string, err error) {
+	defer Return(&err)
+	tx := b.repo.StartTransaction()
+	defer tx.Close()
+	node, err := tx.Getnode(fn)
+	Ck(err)
+	Assert(node != nil, fn)
+	txt, err = tx.Doc2txt(node)
+	Ck(err)
+	return
+}
+
 func (b *Bot) ls() (out []byte, err error) {
 	defer Return(&err)
-	nodes, err := b.gf.AllNodes()
+	tx := b.repo.StartTransaction()
+	defer tx.Close()
+	nodes, err := tx.AllNodes()
 	Ck(err)
 	for _, n := range nodes {
 		out = append(out, []byte(Spf("%s (%s) (%s)\n", n.Name(), n.Id(), n.MimeType()))...)
 	}
-	return
-}
-
-// return the next (unused) document number
-func (b *Bot) NextNum() (next int, err error) {
-	defer Return(&err)
-	last, err := b.gf.LastNum()
-	Ck(err)
-	next = last + 1
-	if next < b.Conf.MinNextNum {
-		next = b.Conf.MinNextNum
-	}
-	return
-}
-
-// open or create file
-func (b *Bot) opendoc(r *http.Request, template, filename string) (node *google.Node, err error) {
-	defer Return(&err)
-	node, err = b.gf.Getnode(filename)
-	Ck(err)
-	if node == nil {
-		// file doesn't exist -- create it
-		node, err = b.mkdoc(r, template, filename)
-		Ck(err)
-		Assert(node != nil, "%s, %s, %s", template, filename, r.Form.Get("title"))
-	}
-	return
-}
-
-// create file
-func (b *Bot) mkdoc(r *http.Request, template, filename string) (node *google.Node, err error) {
-	defer Return(&err)
-	// get template
-	Assert(len(template) > 0)
-	tnode, err := b.gf.Getnode(template)
-	Ck(err, template)
-	Assert(tnode != nil, template)
-
-	node, err = b.gf.Copy(tnode.Id(), filename)
-	Ck(err)
-
-	title := r.Form.Get("title")
-	date := r.Form.Get("session_date")
-	speakers := r.Form.Get("session_speakers")
-
-	if len(title) == 0 {
-		// XXX handle
-		log.Printf("missing title: %s, %v", r.URL, r.Form)
-	}
-
-	// Pprint(r.Form)
-	// Pl("salkdfj", title, speakers, date)
-
-	replace := map[string]string{
-		"NAME":             filename,
-		"TITLE":            title,
-		"SESSION_DATE":     date,
-		"SESSION_SPEAKERS": speakers,
-	}
-	res, err := b.gf.ReplaceText(node, replace)
-	Ck(err)
-
-	// Pprint(res)
-	_ = res
-
-	// XXX
-	// var unlock_url = self_url + "?unlock=t&filename=" + filename
-	// replaceWithUrl(body, "UNLOCK_URL", "http://bit.ly/mcp-index", unlock_url);
-
 	return
 }
 

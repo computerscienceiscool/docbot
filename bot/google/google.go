@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -75,29 +76,22 @@ func (gf *Folder) mkNode(f *drive.File) (node *Node) {
 }
 
 type Folder struct {
-	id    string
-	docs  *docs.Service
-	drive *drive.Service
-	c     *cache
-	mu    sync.Mutex
-	fnre  *regexp.Regexp
-}
-
-type cache struct {
-	nodes   []*Node
-	byname  map[string]*Node
-	time    time.Time
-	lastNum int
+	id         string
+	docs       *docs.Service
+	drive      *drive.Service
+	minNextNum int
+	fnre       *regexp.Regexp
+	mu         sync.Mutex
+	// txcache *transaction
 }
 
 // NewFolder returns an object that represents a single gdrive folder.
 // We assume that the folder is accessible by the service account
 // json credentials provided in cbuf.
-func NewFolder(cbuf []byte, folderid, docPrefix string) (gf *Folder, err error) {
+func NewFolder(cbuf []byte, folderid, docPrefix string, minNextNum int) (gf *Folder, err error) {
 	defer Return(&err)
 
-	gf = &Folder{id: folderid}
-	gf.clearcache()
+	gf = &Folder{id: folderid, minNextNum: minNextNum}
 
 	ctx := context.Background()
 
@@ -114,76 +108,81 @@ func NewFolder(cbuf []byte, folderid, docPrefix string) (gf *Folder, err error) 
 	return
 }
 
-// AllNodes returns all nodes and caches the results.
-func (gf *Folder) AllNodes() (nodes []*Node, err error) {
+func (gf *Folder) StartTransaction() (tx *transaction) {
 	gf.mu.Lock()
-	defer gf.mu.Unlock()
-	defer Return(&err)
+	tx = &transaction{gf: gf}
+	tx.nodes = []*Node{}
+	tx.byname = make(map[string]*Node)
 
-	nodes, err = gf.allNodes()
+	// XXX use gf.txcache to store a prestaged tx populated with nodes
+	/*
+		if time.Now().Sub(tx.time) > time.Minute {
+			gf.clearcache()
+		}
+		tx.time = time.Now()
+	*/
+
+	return
+}
+
+type transaction struct {
+	gf      *Folder
+	nodes   []*Node
+	byname  map[string]*Node
+	lastNum int
+	start   time.Time
+	loaded  bool
+}
+
+func (tx *transaction) loadNodes() (err error) {
+	defer Return(&err)
+	_, err = tx.AllNodes()
 	Ck(err)
 	return
 }
 
-func (gf *Folder) allNodes() (nodes []*Node, err error) {
+func (tx *transaction) Close() {
+	defer tx.gf.mu.Unlock()
+}
+
+// AllNodes returns all nodes and caches the results.
+func (tx *transaction) AllNodes() (nodes []*Node, err error) {
 	defer Return(&err)
 
-	if time.Now().Sub(gf.c.time) > time.Minute {
-		gf.clearcache()
-	}
-	gf.c.time = time.Now()
-
-	if len(gf.c.nodes) == 0 {
-		// cache expired
-		nodes, err := gf.queryNodes("")
+	if !tx.loaded {
+		// populate node list
+		nodes, err := tx.queryNodes("")
 		Ck(err)
 		for _, node := range nodes {
-			err = gf.cachenode(node)
+			err = tx.cachenode(node)
 			Ck(err)
 		}
+		tx.loaded = true
 	}
 
-	nodes = make([]*Node, len(gf.c.nodes))
-	copy(nodes, gf.c.nodes)
-	return
+	// nodes = make([]*Node, len(tx.nodes))
+	// copy(nodes, tx.nodes)
+	return tx.nodes, nil
 }
 
-func (gf *Folder) Copy(fileId, newName string) (node *Node, err error) {
-	gf.mu.Lock()
-	defer gf.mu.Unlock()
+func (tx *transaction) Copy(fileId, newName string) (node *Node, err error) {
 	defer Return(&err)
-	node, err = gf.cp(fileId, newName)
-	Ck(err)
-	return
-}
-
-func (gf *Folder) cp(fileId, newName string) (node *Node, err error) {
-	defer Return(&err)
-	parentref := &drive.ParentReference{Id: gf.id}
+	parentref := &drive.ParentReference{Id: tx.gf.id}
 	file := &drive.File{Parents: []*drive.ParentReference{parentref}, Title: newName}
-	f, err := gf.drive.Files.Copy(fileId, file).Do()
+	f, err := tx.gf.drive.Files.Copy(fileId, file).Do()
 	Ck(err)
-	node = gf.mkNode(f)
-	err = gf.cachenode(node)
-	Ck(err)
-	return
-}
-
-func (gf *Folder) Doc2txt(node *Node) (txt string, err error) {
-	gf.mu.Lock()
-	defer gf.mu.Unlock()
-	defer Return(&err)
-	txt, err = gf.doc2txt(node)
+	node = tx.gf.mkNode(f)
+	err = tx.cachenode(node)
 	Ck(err)
 	return
 }
 
-func (gf *Folder) doc2txt(node *Node) (txt string, err error) {
+func (tx *transaction) Doc2txt(node *Node) (txt string, err error) {
 	defer Return(&err)
 	// https://github.com/rsbh/doc2md/blob/a740060638ca55813c25c7e4a6cf7774e3cbd63f/pkg/transformer/doc2json.go#L368
 	// XXX fetch doc in mkNode
 	// XXX move node stuff to Node, include gf in struct
-	doc, err := gf.docs.Documents.Get(node.Id()).Do()
+	doc, err := tx.gf.docs.Documents.Get(node.Id()).Do()
 	Ck(err)
 	b := doc.Body
 	// Pprint(b.Content)
@@ -204,76 +203,49 @@ func (gf *Folder) doc2txt(node *Node) (txt string, err error) {
 }
 
 // FindNodes takes a query string and returns all matching nodes.
-func (gf *Folder) FindNodes(query string) (nodes []*Node, err error) {
-	gf.mu.Lock()
-	defer gf.mu.Unlock()
+func (tx *transaction) FindNodes(query string) (nodes []*Node, err error) {
 	defer Return(&err)
-
-	nodes, err = gf.findNodes(query)
+	nodes, err = tx.queryNodes(query)
 	Ck(err)
 	return
 }
 
-func (gf *Folder) findNodes(query string) (nodes []*Node, err error) {
+func (tx *transaction) Getnode(fn string) (node *Node, err error) {
 	defer Return(&err)
-	nodes, err = gf.queryNodes(query)
-	Ck(err)
-	return
-}
-
-func (gf *Folder) Getnode(fn string) (node *Node, err error) {
-	gf.mu.Lock()
-	defer gf.mu.Unlock()
-	defer Return(&err)
-
-	node, err = gf.getnode(fn)
-	Ck(err)
-	return
-}
-
-func (gf *Folder) getnode(fn string) (node *Node, err error) {
-	defer Return(&err)
-	// refresh cache
-	_, err = gf.allNodes()
+	err = tx.loadNodes()
 	Ck(err)
 	// return nil if not found
-	node, _ = gf.c.byname[fn]
+	node, _ = tx.byname[fn]
 	return
 }
 
 // return the last used document number
-func (gf *Folder) LastNum() (last int, err error) {
-	gf.mu.Lock()
-	defer gf.mu.Unlock()
+func (tx *transaction) LastNum() (last int, err error) {
 	defer Return(&err)
-
-	last, err = gf.lastNum()
+	err = tx.loadNodes()
 	Ck(err)
+	last = tx.lastNum
 	return
 }
 
-func (gf *Folder) lastNum() (last int, err error) {
+// return the next (unused) document number
+func (tx *transaction) NextNum() (next int, err error) {
 	defer Return(&err)
-	// refresh cache
-	_, err = gf.allNodes()
+	err = tx.loadNodes()
 	Ck(err)
-	last = gf.c.lastNum
+	last, err := tx.LastNum()
+	Ck(err)
+	next = last + 1
+	if next < tx.gf.minNextNum {
+		next = tx.gf.minNextNum
+	}
 	return
 }
 
-func (gf *Folder) GetHeaders(node *Node) (h map[string]string, err error) {
-	gf.mu.Lock()
-	defer gf.mu.Unlock()
-	defer Return(&err)
-	h, err = gf.getHeaders(node)
-	Ck(err)
-	return
-}
-
-func (gf *Folder) getHeaders(node *Node) (h map[string]string, err error) {
+func (tx *transaction) GetHeaders(node *Node) (h map[string]string, err error) {
 	defer Return(&err)
 	h = make(map[string]string)
-	txt, err := gf.doc2txt(node)
+	txt, err := tx.Doc2txt(node)
 	Ck(err)
 	lines := strings.Split(txt, "\n")
 	for _, line := range lines {
@@ -292,9 +264,9 @@ func (gf *Folder) getHeaders(node *Node) (h map[string]string, err error) {
 	return
 }
 
-func (gf *Folder) cachenode(node *Node) (err error) {
+func (tx *transaction) cachenode(node *Node) (err error) {
 	defer Return(&err)
-	_, found := gf.c.byname[node.name]
+	_, found := tx.byname[node.name]
 	if found {
 		// XXX figure out how to handle this better -- this could be
 		// caused either by a race condition, by a user forcing a filename
@@ -303,39 +275,28 @@ func (gf *Folder) cachenode(node *Node) (err error) {
 		// XXX for now we might just add an integer suffix
 		log.Printf("duplicate filename: %s", node.name)
 	}
-	gf.c.byname[node.name] = node
-	gf.c.nodes = append(gf.c.nodes, node)
-	if node.num > gf.c.lastNum {
-		gf.c.lastNum = node.num
+	tx.byname[node.name] = node
+	tx.nodes = append(tx.nodes, node)
+	if node.num > tx.lastNum {
+		tx.lastNum = node.num
 	}
 	return
 }
 
-func (gf *Folder) Clearcache() {
-	gf.mu.Lock()
-	defer gf.mu.Unlock()
-	gf.clearcache()
-}
-
-func (gf *Folder) clearcache() {
-	gf.c = &cache{}
-	gf.c.nodes = []*Node{}
-	gf.c.byname = make(map[string]*Node)
-}
-
-func (gf *Folder) queryNodes(query string) (nodes []*Node, err error) {
+// XXX move to backend
+func (tx *transaction) queryNodes(query string) (nodes []*Node, err error) {
 	defer Return(&err)
 
 	if query == "" {
-		query = fmt.Sprintf("'%v' in parents", gf.id)
+		query = fmt.Sprintf("'%v' in parents", tx.gf.id)
 	} else {
-		query = fmt.Sprintf("'%v' in parents and %s", gf.id, query)
+		query = fmt.Sprintf("'%v' in parents and %s", tx.gf.id, query)
 	}
 
 	var pageToken string
 	for {
 
-		q := gf.drive.Files.List().Q(query)
+		q := tx.gf.drive.Files.List().Q(query)
 
 		if pageToken != "" {
 			q = q.PageToken(pageToken)
@@ -346,7 +307,7 @@ func (gf *Folder) queryNodes(query string) (nodes []*Node, err error) {
 
 		for _, f := range res.Items {
 			// f is a *drive.File
-			node := gf.mkNode(f)
+			node := tx.gf.mkNode(f)
 			Ck(err)
 			nodes = append(nodes, node)
 		}
@@ -360,16 +321,7 @@ func (gf *Folder) queryNodes(query string) (nodes []*Node, err error) {
 	return
 }
 
-func (gf *Folder) ReplaceText(node *Node, replaceParams map[string]string) (res *docs.BatchUpdateDocumentResponse, err error) {
-	gf.mu.Lock()
-	defer gf.mu.Unlock()
-	defer Return(&err)
-	res, err = gf.replaceText(node, replaceParams)
-	Ck(err)
-	return
-}
-
-func (gf *Folder) replaceText(node *Node, replaceParams map[string]string) (res *docs.BatchUpdateDocumentResponse, err error) {
+func (tx *transaction) ReplaceText(node *Node, replaceParams map[string]string) (res *docs.BatchUpdateDocumentResponse, err error) {
 	defer Return(&err)
 
 	requests := make([]*docs.Request, 0)
@@ -385,30 +337,86 @@ func (gf *Folder) replaceText(node *Node, replaceParams map[string]string) (res 
 		})
 	}
 	update := &docs.BatchUpdateDocumentRequest{Requests: requests}
-	res, err = gf.docs.Documents.BatchUpdate(node.id, update).Do()
+	res, err = tx.gf.docs.Documents.BatchUpdate(node.id, update).Do()
 	Ck(err)
 	return
 }
 
-func (gf *Folder) Rm(fn string) (err error) {
-	gf.mu.Lock()
-	defer gf.mu.Unlock()
+func (tx *transaction) Rm(fn string) (err error) {
 	defer Return(&err)
-
-	err = gf.rm(fn)
+	rmnode, err := tx.Getnode(fn)
 	Ck(err)
-	return
-}
-
-func (gf *Folder) rm(fn string) (err error) {
-	defer Return(&err)
-	node, err := gf.getnode(fn)
-	Ck(err)
-	if node == nil {
+	if rmnode == nil {
 		return
 	}
-	err = gf.drive.Files.Delete(node.id).Do()
+	err = tx.gf.drive.Files.Delete(rmnode.id).Do()
 	Ck(err)
+	var newNodes []*Node
+	for _, n := range tx.nodes {
+		if n.id != rmnode.id {
+			newNodes = append(newNodes, n)
+		}
+	}
+	tx.nodes = newNodes
+	delete(tx.byname, fn)
+	return
+}
+
+// open or create file
+// XXX pass in opts struct instead of http.Request
+func (tx *transaction) Opendoc(r *http.Request, template, filename string) (node *Node, err error) {
+	defer Return(&err)
+	node, err = tx.Getnode(filename)
+	Ck(err)
+	if node == nil {
+		// file doesn't exist -- create it
+		node, err = tx.mkdoc(r, template, filename)
+		Ck(err)
+		Assert(node != nil, "%s, %s, %s", template, filename, r.Form.Get("title"))
+	}
+	return
+}
+
+// create file
+func (tx *transaction) mkdoc(r *http.Request, template, filename string) (node *Node, err error) {
+	defer Return(&err)
+	// get template
+	Assert(len(template) > 0)
+	tnode, err := tx.Getnode(template)
+	Ck(err, template)
+	Assert(tnode != nil, template)
+
+	node, err = tx.Copy(tnode.Id(), filename)
+	Ck(err)
+
+	title := r.Form.Get("title")
+	date := r.Form.Get("session_date")
+	speakers := r.Form.Get("session_speakers")
+
+	if len(title) == 0 {
+		// XXX handle
+		log.Printf("missing title: %s, %v", r.URL, r.Form)
+	}
+
+	// Pprint(r.Form)
+	// Pl("salkdfj", title, speakers, date)
+
+	replace := map[string]string{
+		"NAME":             filename,
+		"TITLE":            title,
+		"SESSION_DATE":     date,
+		"SESSION_SPEAKERS": speakers,
+	}
+	res, err := tx.ReplaceText(node, replace)
+	Ck(err)
+
+	// Pprint(res)
+	_ = res
+
+	// XXX
+	// var unlock_url = self_url + "?unlock=t&filename=" + filename
+	// replaceWithUrl(body, "UNLOCK_URL", "http://bit.ly/mcp-index", unlock_url);
+
 	return
 }
 
@@ -417,7 +425,7 @@ func (gf *Folder) rm(fn string) (err error) {
 func (gf *Google) Copy(fileid, newName string) (newNode *cache.Node, err error) {
 	defer Return(&err)
 	req := request{name: fn}
-	res := gf.xeq(gf.getNode, req)
+	res := gf.xeq(tx.GetNode, req)
 	return &res.node, err
 }
 
