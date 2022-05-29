@@ -3,6 +3,7 @@ package google
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -12,23 +13,46 @@ import (
 )
 
 // regenerate testdata
-const regen bool = true
+const regen bool = false
 
 const (
 	credpath = "../../local/mcpbot-mcpbot-key.json"
 	folderId = "1HcCIw7ppJZPD9GEHccnkgNYUwhAGCif6"
 )
 
-func setup(t *testing.T) (f *Folder) {
+func TestMain(m *testing.M) {
+	setup()
+	code := m.Run()
+	// teardown()
+	os.Exit(code)
+}
+
+var gf *Folder
+
+func setup() {
 	cbuf, err := ioutil.ReadFile(credpath)
-	Tassert(t, err == nil, err)
-	f, err = NewFolder(cbuf, folderId, "mcp")
-	Tassert(t, err == nil, err)
+	Ck(err)
+	gf, err = NewFolder(cbuf, folderId, "mcp")
+	Ck(err)
 	return
 }
 
+func cleanup(t *testing.T) {
+	// clean up from previous test
+	gf.Clearcache()
+	nodes, err := gf.AllNodes()
+	Ck(err)
+	for _, node := range nodes {
+		if node.Num() >= 900 {
+			err = gf.Rm(node.Name())
+			Tassert(t, err == nil, Spf("%v: %v", node.Name(), err))
+		}
+	}
+	gf.Clearcache()
+}
+
 func TestContent(t *testing.T) {
-	gf := setup(t)
+	cleanup(t)
 
 	fn := "mcp-4-why-numbered-docs"
 	expect := "Name: mcp-4-why-numbered-docs\n"

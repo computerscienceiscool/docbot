@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
 	// "github.com/sergi/go-diff/diffmatchpatch"
@@ -15,24 +16,34 @@ import (
 )
 
 // regenerate testdata
-const regen bool = true
+const regen bool = false
 
 const confpath = "testdata/docbot.conf"
 const credpath = "../local/mcpbot-mcpbot-key.json"
 
-func setup(t *testing.T) (b *Bot) {
+func TestMain(m *testing.M) {
+	setup()
+	code := m.Run()
+	// teardown()
+	os.Exit(code)
+}
+
+var b *Bot
+
+func setup() {
 	b = &Bot{
 		Confpath: confpath,
 		Credpath: credpath,
 	}
 	err := b.Init()
-	Tassert(t, err == nil, err)
-	cleanup(t, b)
+	Ck(err)
+	// cleanup(t, b)
 	return
 }
 
-func cleanup(t *testing.T, b *Bot) {
-	// clean up from previous fail
+func cleanup(t *testing.T) {
+	// clean up from previous test
+	b.gf.Clearcache()
 	nodes, err := b.gf.AllNodes()
 	Ck(err)
 	for _, node := range nodes {
@@ -44,17 +55,8 @@ func cleanup(t *testing.T, b *Bot) {
 	b.gf.Clearcache()
 }
 
-/*
-func TestMain(m *testing.M) {
-	setup()
-	code := m.Run()
-	teardown()
-	os.Exit(code)
-}
-*/
-
 func TestMkDoc(t *testing.T) {
-	b := setup(t)
+	cleanup(t)
 
 	fn := "mcp-910-test10"
 	title := "test 10"
@@ -116,7 +118,7 @@ func TestMkDoc(t *testing.T) {
 }
 
 func TestMkSessionDoc(t *testing.T) {
-	b := setup(t)
+	cleanup(t)
 
 	fn := "mcp-911-test11"
 	title := "test 11"
@@ -166,7 +168,7 @@ func TestMkSessionDoc(t *testing.T) {
 }
 
 func TestLs(t *testing.T) {
-	b := setup(t)
+	cleanup(t)
 
 	got, err := b.ls()
 	Tassert(t, err == nil, err)
@@ -187,7 +189,7 @@ func TestLs(t *testing.T) {
 }
 
 func TestGetnode(t *testing.T) {
-	b := setup(t)
+	cleanup(t)
 
 	fn := "mcp-4-why-numbered-docs"
 
@@ -198,7 +200,7 @@ func TestGetnode(t *testing.T) {
 }
 
 func TestIndex(t *testing.T) {
-	b := setup(t)
+	cleanup(t)
 
 	// https://pkg.go.dev/net/http/httptest#NewRequest
 	// https://golang.cafe/blog/golang-httptest-example.html
@@ -225,7 +227,7 @@ func TestIndex(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
-	b := setup(t)
+	cleanup(t)
 
 	// https://pkg.go.dev/net/http/httptest#NewRequest
 	// https://golang.cafe/blog/golang-httptest-example.html
@@ -252,7 +254,7 @@ func TestSearch(t *testing.T) {
 }
 
 func TestFilename(t *testing.T) {
-	b := setup(t)
+	cleanup(t)
 
 	fn := "mcp-1-repository-github"
 
@@ -290,7 +292,7 @@ func TestFilename(t *testing.T) {
 }
 
 func TestText(t *testing.T) {
-	b := setup(t)
+	cleanup(t)
 
 	fn := "mcp-4-why-numbered-docs"
 
