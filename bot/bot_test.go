@@ -52,7 +52,7 @@ func cleanup(t *testing.T, b *Bot) {
 		fail := false
 		for _, node := range nodes {
 			if node.Num() >= 900 {
-				err = tx.Rm(node.Name())
+				err = tx.Rm(node)
 				if err != nil {
 					Pf("cleanup: %v: %v\n", node.Name(), err)
 					fail = true

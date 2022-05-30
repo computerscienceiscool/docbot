@@ -56,7 +56,7 @@ func setup(t *testing.T) (tx *transaction) {
 	Tassert(t, err == nil, err)
 	for _, node := range nodes {
 		if node.Num() >= 900 {
-			err = tx.Rm(node.Name())
+			err = tx.Rm(node)
 			if err != nil {
 				Pf("%v: %v\n", node.Name(), err)
 			}

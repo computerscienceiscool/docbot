@@ -397,10 +397,8 @@ func (tx *transaction) batchUpdate(node *Node, reqs []*docs.Request) (res *docs.
 	return
 }
 
-func (tx *transaction) Rm(fn string) (err error) {
+func (tx *transaction) Rm(rmnode *Node) (err error) {
 	defer Return(&err)
-	rmnode, err := tx.Getnode(fn)
-	Ck(err)
 	if rmnode == nil {
 		return
 	}
@@ -413,7 +411,7 @@ func (tx *transaction) Rm(fn string) (err error) {
 		}
 	}
 	tx.nodes = newNodes
-	delete(tx.byname, fn)
+	delete(tx.byname, rmnode.name)
 	return
 }
 
