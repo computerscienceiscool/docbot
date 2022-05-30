@@ -152,7 +152,7 @@ func (b *Bot) index(w http.ResponseWriter, r *http.Request) {
 	}
 	if tmpl != "" {
 		var node *google.Node
-		node, err = tx.Opendoc(r, tmpl, ofn)
+		node, err = tx.Opendoc(r, tmpl, ofn, b.Conf.Url)
 		ckw(w, err)
 		http.Redirect(w, r, node.URL(), http.StatusFound)
 		return
@@ -192,6 +192,18 @@ func (b *Bot) getText(fn string) (txt string, err error) {
 	Ck(err)
 	Assert(node != nil, fn)
 	txt, err = tx.Doc2txt(node)
+	Ck(err)
+	return
+}
+
+func (b *Bot) getJson(fn string) (buf []byte, err error) {
+	defer Return(&err)
+	tx := b.repo.StartTransaction()
+	defer tx.Close()
+	node, err := tx.Getnode(fn)
+	Ck(err)
+	Assert(node != nil, fn)
+	buf, err = tx.Doc2json(node)
 	Ck(err)
 	return
 }

@@ -2,9 +2,11 @@ package google
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -177,6 +179,16 @@ func (tx *transaction) Copy(fileId, newName string) (node *Node, err error) {
 	return
 }
 
+func (tx *transaction) Doc2json(node *Node) (buf []byte, err error) {
+	defer Return(&err)
+	doc, err := tx.gf.docs.Documents.Get(node.Id()).Do()
+	Ck(err)
+	b := doc.Body
+	buf, err = json.MarshalIndent(b.Content, "", "  ")
+	Ck(err)
+	return
+}
+
 func (tx *transaction) Doc2txt(node *Node) (txt string, err error) {
 	defer Return(&err)
 	// https://github.com/rsbh/doc2md/blob/a740060638ca55813c25c7e4a6cf7774e3cbd63f/pkg/transformer/doc2json.go#L368
@@ -207,6 +219,40 @@ func (tx *transaction) FindNodes(query string) (nodes []*Node, err error) {
 	defer Return(&err)
 	nodes, err = tx.queryNodes(query)
 	Ck(err)
+	return
+}
+
+func (tx *transaction) textRuns(node *Node) (els []*docs.ParagraphElement, err error) {
+	defer Return(&err)
+	doc, err := tx.gf.docs.Documents.Get(node.Id()).Do()
+	Ck(err)
+	b := doc.Body
+	// iterate over elements
+	for _, s := range b.Content {
+		if s.Paragraph != nil {
+			for _, el := range s.Paragraph.Elements {
+				if el.TextRun != nil {
+					els = append(els, el)
+				}
+			}
+		}
+	}
+	return
+}
+
+func (tx *transaction) FindTextRun(node *Node, txt string) (el *docs.ParagraphElement, err error) {
+	defer Return(&err)
+
+	els, err := tx.textRuns(node)
+	Ck(err)
+	for _, e := range els {
+		// Pprint(e.TextRun.Content)
+		if e.TextRun.Content == txt {
+			el = e
+			break
+		}
+	}
+
 	return
 }
 
@@ -321,12 +367,17 @@ func (tx *transaction) queryNodes(query string) (nodes []*Node, err error) {
 	return
 }
 
-func (tx *transaction) ReplaceText(node *Node, replaceParams map[string]string) (res *docs.BatchUpdateDocumentResponse, err error) {
+func (tx *transaction) XXXReplaceText(node *Node, parms map[string]string) (res *docs.BatchUpdateDocumentResponse, err error) {
 	defer Return(&err)
+	reqs := replaceAllTextRequest(parms)
+	res, err = tx.batchUpdate(node, reqs)
+	return
+}
 
-	requests := make([]*docs.Request, 0)
-	for k, v := range replaceParams {
-		requests = append(requests, &docs.Request{
+func replaceAllTextRequest(parms map[string]string) (reqs []*docs.Request) {
+	reqs = make([]*docs.Request, 0)
+	for k, v := range parms {
+		reqs = append(reqs, &docs.Request{
 			ReplaceAllText: &docs.ReplaceAllTextRequest{
 				ContainsText: &docs.SubstringMatchCriteria{
 					MatchCase: true,
@@ -336,7 +387,11 @@ func (tx *transaction) ReplaceText(node *Node, replaceParams map[string]string) 
 			},
 		})
 	}
-	update := &docs.BatchUpdateDocumentRequest{Requests: requests}
+	return
+}
+
+func (tx *transaction) batchUpdate(node *Node, reqs []*docs.Request) (res *docs.BatchUpdateDocumentResponse, err error) {
+	update := &docs.BatchUpdateDocumentRequest{Requests: reqs}
 	res, err = tx.gf.docs.Documents.BatchUpdate(node.id, update).Do()
 	Ck(err)
 	return
@@ -362,15 +417,33 @@ func (tx *transaction) Rm(fn string) (err error) {
 	return
 }
 
+func updateLinkRequest(el *docs.ParagraphElement, url string) (req *docs.Request) {
+	req = &docs.Request{
+		UpdateTextStyle: &docs.UpdateTextStyleRequest{
+			Fields: "link",
+			Range: &docs.Range{
+				StartIndex: el.StartIndex,
+				EndIndex:   el.EndIndex,
+			},
+			TextStyle: &docs.TextStyle{
+				Link: &docs.Link{
+					Url: url,
+				},
+			},
+		},
+	}
+	return
+}
+
 // open or create file
 // XXX pass in opts struct instead of http.Request
-func (tx *transaction) Opendoc(r *http.Request, template, filename string) (node *Node, err error) {
+func (tx *transaction) Opendoc(r *http.Request, template, filename, baseUrl string) (node *Node, err error) {
 	defer Return(&err)
 	node, err = tx.Getnode(filename)
 	Ck(err)
 	if node == nil {
 		// file doesn't exist -- create it
-		node, err = tx.mkdoc(r, template, filename)
+		node, err = tx.mkdoc(r, template, filename, baseUrl)
 		Ck(err)
 		Assert(node != nil, "%s, %s, %s", template, filename, r.Form.Get("title"))
 	}
@@ -378,7 +451,7 @@ func (tx *transaction) Opendoc(r *http.Request, template, filename string) (node
 }
 
 // create file
-func (tx *transaction) mkdoc(r *http.Request, template, filename string) (node *Node, err error) {
+func (tx *transaction) mkdoc(r *http.Request, template, filename, baseUrl string) (node *Node, err error) {
 	defer Return(&err)
 	// get template
 	Assert(len(template) > 0)
@@ -393,32 +466,97 @@ func (tx *transaction) mkdoc(r *http.Request, template, filename string) (node *
 	date := r.Form.Get("session_date")
 	speakers := r.Form.Get("session_speakers")
 
+	v := url.Values{}
+	v.Set("filename", node.name)
+	v.Set("unlock", "t")
+	unlockUrl := Spf("%s?%s", baseUrl, v.Encode())
+
 	if len(title) == 0 {
 		// XXX handle
 		log.Printf("missing title: %s, %v", r.URL, r.Form)
 	}
 
-	// Pprint(r.Form)
-	// Pl("salkdfj", title, speakers, date)
-
-	replace := map[string]string{
+	// generate update requests
+	parms := map[string]string{
 		"NAME":             filename,
 		"TITLE":            title,
 		"SESSION_DATE":     date,
 		"SESSION_SPEAKERS": speakers,
+		"UNLOCK_URL":       unlockUrl,
 	}
-	res, err := tx.ReplaceText(node, replace)
+	treqs := replaceAllTextRequest(parms)
+	el, err := tx.FindTextRun(node, "UNLOCK_URL")
+	Ck(err)
+	var reqs []*docs.Request
+	if el != nil {
+		lreq := updateLinkRequest(el, unlockUrl)
+		reqs = append(treqs, lreq)
+	} else {
+		reqs = treqs
+	}
+	res, err := tx.batchUpdate(node, reqs)
 	Ck(err)
 
 	// Pprint(res)
 	_ = res
 
-	// XXX
-	// var unlock_url = self_url + "?unlock=t&filename=" + filename
-	// replaceWithUrl(body, "UNLOCK_URL", "http://bit.ly/mcp-index", unlock_url);
-
 	return
 }
+
+/*
+	// find link
+	el, err := tx.FindTextRun(node, "UNLOCK_URL")
+	Tassert(t, err == nil, err)
+	Tassert(t, el != nil, Spf("%#v", node))
+	Tassert(t, el.TextRun.Content == "UNLOCK_URL", el)
+
+	// generate update requests
+	lreq := updateLinkRequest(el, unlockUrl)
+	parms := map[string]string{"UNLOCK_URL": unlockUrl}
+	treqs := replaceAllTextRequest(parms)
+	reqs := append(treqs, lreq)
+
+	// run it
+	res, err := tx.batchUpdate(node, reqs)
+	Tassert(t, err == nil, err)
+	// Pprint(res)
+	_ = res
+*/
+
+/*
+func (tx *transaction) ReplaceWithUrl(node *Node, tag, text, url string) (err error) {
+	defer Return(&err)
+
+	// https://github.com/rsbh/doc2md/blob/a740060638ca55813c25c7e4a6cf7774e3cbd63f/pkg/transformer/doc2json_test.go#L132
+	newtr := &docs.TextRun{
+		Content: text,
+		TextStyle: &docs.TextStyle{
+			Link: &docs.Link{
+				Url: url,
+			},
+		},
+	}
+
+	// XXX call textRuns()
+	doc, err := tx.gf.docs.Documents.Get(node.Id()).Do()
+	Ck(err)
+	b := doc.Body
+	// iterate over elements
+	for _, s := range b.Content {
+		if s.Paragraph != nil {
+			for _, el := range s.Paragraph.Elements {
+				if el.TextRun != nil {
+					if el.TextRun.Content == tag {
+						// replace with new link
+						el.TextRun = newtr
+					}
+				}
+			}
+		}
+	}
+	return
+}
+*/
 
 /*
 

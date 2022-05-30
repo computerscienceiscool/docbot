@@ -33,6 +33,7 @@ do
 	cd bot
 	go test -v ./... -coverprofile=/tmp/got.out -coverpkg=./... || continue
 	padsp signalgen -t 100m sin 392 # G4
+	# continue # XXX 
 	goenv exec go tool cover -html=/tmp/got.out -o /tmp/got.html
 	xdg-open /tmp/got.html
 	sleep 1
