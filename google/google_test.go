@@ -1,13 +1,8 @@
 package google
 
 import (
-	"encoding/json"
 	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strings"
 	"testing"
-	"time"
 
 	// "github.com/sergi/go-diff/diffmatchpatch"
 
@@ -31,91 +26,26 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-var gf *Folder
-
-func setup() {
-	cbuf, err := ioutil.ReadFile(credpath)
-	Ck(err)
-	gf, err = NewFolder(cbuf, folderId, "mcp")
-	Ck(err)
-	return
-}
 */
 
-func setup(t *testing.T) (tx *transaction) {
+func setup(t *testing.T) (gf *Folder) {
 	cbuf, err := ioutil.ReadFile(credpath)
 	Tassert(t, err == nil, err)
 
-	gf, err := NewFolder(cbuf, folderId, "mcp", 900)
+	gf, err = NewFolder(cbuf, folderId, "mcp", 900)
 	Tassert(t, err == nil, err)
 
-	tx = gf.StartTransaction()
-
-	// clean up from previous test
-	nodes, err := tx.AllNodes()
-	Tassert(t, err == nil, err)
-	for _, node := range nodes {
-		if node.Num() >= 900 {
-			err = tx.Rm(node)
-			if err != nil {
-				Pf("%v: %v\n", node.Name(), err)
-			}
-		}
-	}
-	time.Sleep(time.Second)
 	return
 }
 
-func waitfor(tx *transaction, node *Node) {
-	for i := 0; i < 10; i++ {
-		doc, err := tx.gf.docs.Documents.Get(node.id).Do()
-		if doc != nil && err == nil {
-			break
-		}
-		Pf("waitfor: %v: %v\n", node.name, err)
-		time.Sleep(time.Second)
-	}
-}
-
-func TestOpenDoc(t *testing.T) {
-	tx := setup(t)
-	defer tx.Close()
-
-	fn := "mcp-910-test10"
-	title := "test 10"
-	baseUrl := "http://example.com"
-	v := url.Values{}
-	v.Set("filename", fn)
-	v.Set("title", title)
-	url := Spf("%s?%s", "/", v.Encode())
-
-	// create
-	r, err := http.NewRequest("GET", url, nil)
-	Tassert(t, err == nil, err)
-	err = r.ParseForm()
-	Tassert(t, err == nil, err)
-	node, err := tx.Opendoc(r, template, fn, baseUrl)
-	Tassert(t, err == nil, err)
-	Tassert(t, node != nil)
-
-	// check title in body
-	h, err := tx.GetHeaders(node)
-	Tassert(t, err == nil, err)
-	gotTitle, ok := h["Title"]
-	Tassert(t, ok, Spf("%#v", h))
-	// Pprint(h)
-	Tassert(t, gotTitle == title, gotTitle)
-
-}
-
+/*
 func TestContent(t *testing.T) {
-	tx := setup(t)
-	defer tx.Close()
+	gf := setup(t)
 
 	fn := "mcp-4-why-numbered-docs"
 	expect := "Name: mcp-4-why-numbered-docs\n"
 
-	node, err := tx.Getnode(fn)
+	node, err := gf.Getnode(fn)
 	Tassert(t, err == nil, err)
 	Tassert(t, node != nil, Spf("%#v", node))
 
@@ -165,6 +95,7 @@ func TestFindText(t *testing.T) {
 	Tassert(t, el.TextRun.Content == "UNLOCK_URL", el)
 	Tassert(t, el.TextRun.TextStyle.Link.Url == "http://example.com", el)
 }
+*/
 
 /*
 	XXX

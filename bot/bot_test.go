@@ -1,17 +1,11 @@
 package bot
 
 import (
-	"bytes"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"testing"
 	"time"
 
 	// "github.com/sergi/go-diff/diffmatchpatch"
-	"github.com/sergi/go-diff/diffmatchpatch"
+
 	. "github.com/stevegt/goadapt"
 )
 
@@ -46,7 +40,7 @@ func setup(t *testing.T) (b *Bot) {
 // clean up from previous test
 func cleanup(t *testing.T, b *Bot) {
 	for i := 0; i < 5; i++ {
-		tx := b.repo.StartTransaction()
+		tx := b.StartTransaction()
 		nodes, err := tx.AllNodes()
 		Tassert(t, err == nil, err)
 		fail := false
@@ -70,7 +64,7 @@ func cleanup(t *testing.T, b *Bot) {
 }
 
 func waitfor(b *Bot, fn string) {
-	tx := b.repo.StartTransaction()
+	tx := b.StartTransaction()
 	defer tx.Close()
 	for i := 0; i < 10; i++ {
 		node, err := tx.Getnode(fn)
@@ -82,93 +76,7 @@ func waitfor(b *Bot, fn string) {
 	}
 }
 
-func TestMkDoc(t *testing.T) {
-	b := setup(t)
-
-	ts := httptest.NewServer(http.HandlerFunc(b.index))
-	defer ts.Close()
-
-	fn := "mcp-910-test10"
-	title := "test 10"
-	v := url.Values{}
-	v.Set("filename", fn)
-	v.Set("title", title)
-	url := Spf("%s?%s", ts.URL, v.Encode())
-
-	// create via mock docbot server
-	_, err := http.Get(url)
-	Tassert(t, err == nil, err)
-	waitfor(b, fn)
-
-	// get document text
-	txt, err := b.getText(fn)
-	Tassert(t, err == nil, Spf("getText: %v: %v\n", fn, err))
-	got := []byte(txt)
-
-	dmp := diffmatchpatch.New()
-
-	reffn := "testdata/mkdoc.txt"
-	if regen {
-		err = ioutil.WriteFile(reffn, got, 0644)
-		Ck(err)
-	}
-	ref, err := ioutil.ReadFile(reffn)
-	Tassert(t, err == nil, err)
-	diffs := dmp.DiffMain(string(ref), string(got), false)
-	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
-}
-
-func TestMkSessionDoc(t *testing.T) {
-	b := setup(t)
-
-	fn := "mcp-911-test11"
-	title := "test 11"
-	date := "02 Jan 2006"
-	speakers := "Alice Arms, Bob Barker, Carol Carnes"
-
-	ts := httptest.NewServer(http.HandlerFunc(b.index))
-	defer ts.Close()
-
-	v := url.Values{}
-	v.Set("title", title)
-	v.Set("session_filename", fn)
-	v.Set("session_date", date)
-	v.Set("session_speakers", speakers)
-	url := Spf("%s?%s", ts.URL, v.Encode())
-
-	// create via mock docbot server
-	_, err := http.Get(url)
-	Tassert(t, err == nil, err)
-	waitfor(b, fn)
-
-	// Pprint(url)
-	// Pprint(res.Status)
-	// Pprint(res.Header)
-
-	// get document text
-	txt, err := b.getText(fn)
-	Tassert(t, err == nil, err)
-	got := []byte(txt)
-
-	dmp := diffmatchpatch.New()
-
-	reffn := "testdata/mksessiondoc.txt"
-	if regen {
-		err = ioutil.WriteFile(reffn, got, 0644)
-		Ck(err)
-	}
-	ref, err := ioutil.ReadFile(reffn)
-	Tassert(t, err == nil, err)
-	diffs := dmp.DiffMain(string(ref), string(got), false)
-	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
-
-	// save a copy of content for reverse engineering
-	buf, err := b.getJson(fn)
-	Tassert(t, err == nil, err)
-	err = ioutil.WriteFile("/tmp/mcp-911.json", buf, 0644)
-	Tassert(t, err == nil, err)
-}
-
+/*
 func TestLs(t *testing.T) {
 	b := setup(t)
 
@@ -301,48 +209,5 @@ func TestText(t *testing.T) {
 	diffs := dmp.DiffMain(string(ref), string(got), false)
 	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
 
-}
-
-/*
-func TestReplaceUrl(t *testing.T) {
-	b := setup(t)
-
-	fn := "mcp-912-test12"
-	title := "test 12"
-	date := "02 Jan 2006"
-	speakers := "Alice Arms, Bob Barker, Carol Carnes"
-	baseUrl := "http://example.com"
-	unlockUrl := "http://www.example.com"
-
-	ts := httptest.NewServer(http.HandlerFunc(b.index))
-	defer ts.Close()
-	v := url.Values{}
-	v.Set("title", title)
-	v.Set("session_filename", fn)
-	v.Set("session_date", date)
-	v.Set("session_speakers", speakers)
-	url := Spf("%s?%s", ts.URL, v.Encode())
-
-	// create via mock docbot server
-	_, err := http.Get(url)
-	Tassert(t, err == nil, err)
-	waitfor(b, fn)
-
-	// get document text
-	txt, err := tx.Doc2txt(node)
-	Tassert(t, err == nil, Spf("getText: %v: %v\n", fn, err))
-	got := []byte(txt)
-
-	dmp := diffmatchpatch.New()
-
-	reffn := "testdata/replaceurl.txt"
-	if true {
-		err = ioutil.WriteFile(reffn, got, 0644)
-		Ck(err)
-	}
-	ref, err := ioutil.ReadFile(reffn)
-	Tassert(t, err == nil, err)
-	diffs := dmp.DiffMain(string(ref), string(got), false)
-	Tassert(t, bytes.Equal(ref, got), dmp.DiffPrettyText(diffs))
 }
 */

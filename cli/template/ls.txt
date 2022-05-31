@@ -1,0 +1,3 @@
+{{- range $node := .AllNodes }}
+  {{ $node.Name }} {{ $node.Id }} {{ $node.MimeType }}
+{{- end }}

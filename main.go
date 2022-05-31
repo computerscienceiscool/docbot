@@ -5,6 +5,8 @@ import (
 
 	"github.com/docopt/docopt-go"
 	"github.com/stevegt/docbot/bot"
+	"github.com/stevegt/docbot/cli"
+	"github.com/stevegt/docbot/web"
 	"github.com/stevegt/envi"
 	. "github.com/stevegt/goadapt"
 )
@@ -13,11 +15,10 @@ const usage = `docbot
 
 Usage:
   docbot ls 
-  docbot put 
   docbot serve 
 
-If DOCBOT_CONF is not set to a config file path, then docbot will look
-for a file named ".docbot.conf" in the local directory.
+  If DOCBOT_CONF is not set to a config file path, then docbot will look
+  for a file named ".docbot.conf" in the local directory.
 
 `
 
@@ -30,7 +31,15 @@ func main() {
 	Ck(err)
 	b.Confpath = envi.String("DOCBOT_CONF", ".docbot.conf")
 	b.Credpath = envi.String("DOCBOT_CRED", ".docbot.cred")
-	res, err := b.Run()
-	Ck(err)
-	Pl(res)
+
+	if b.Serve {
+		err = web.Serve(&b)
+	} else {
+		err = cli.Run(&b)
+	}
+	if err != nil {
+		Fpf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
 }

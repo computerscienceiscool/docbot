@@ -21,23 +21,33 @@ set -x
 while true
 do
 	padsp signalgen -t 100m sin 523 # C5
-	cd $base
+
 	echo =======================
 	inotifywait -r -e modify *
 	padsp signalgen -t 100m sin 262 # C4
 	killpid
 	sleep 1
+
 	go vet ./... || continue
+
 	wmctrl -ia $winid
 	padsp signalgen -t 100m sin 330 # E4 
-	cd bot
+
 	go test -v ./... -coverprofile=/tmp/got.out -coverpkg=./... || continue
 	padsp signalgen -t 100m sin 392 # G4
 	# continue # XXX 
 	goenv exec go tool cover -html=/tmp/got.out -o /tmp/got.html
 	xdg-open /tmp/got.html
 	sleep 1
-	cd $base
+
+	if ! go run . ls 
+	then
+		echo "FAIL ls"
+		padsp signalgen -t 100m sin 220 # A3
+		wmctrl -ia $winid
+		continue
+	fi
+
 	go run . serve &
 	sleep 3
 	if ! kill -0 $(cat $pidfn) 
@@ -48,5 +58,6 @@ do
 		continue
 	fi
 	xdg-open http://localhost:8080
+
 	sleep 1
 done
