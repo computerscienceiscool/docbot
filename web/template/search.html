@@ -1,0 +1,91 @@
+<html>
+    <body>
+
+        {{template "head.html" .}}
+
+
+                <table border=0 cellspacing=0 cellpadding=5 width=100%>
+                    <tr><td>
+                            <hr>
+                            <center><a href="https://www.nomcon.org/schedule">NOMCON 2022 Schedule</a> -- includes links to session and working group docs.</center>
+                        </td></tr>
+
+                                <tr><td>
+                                        <hr>
+                                        <h2>Search for documents</h2>
+                                        <form action="{{.URL}}" method='get'>
+                                            <table border=0 cellspacing=0 cellpadding=10>
+                                                <tr><td>Find documents containing all of these words:</td><td><input type="text" id="query" name="query" value="{{.SearchQuery}}" size=60></td></tr>
+                                                <tr><td colspan=2 align=center><input type="submit" value="Search"></td></tr>
+                                            </table>
+                                        </form>
+                                        <hr>
+                                    </td></tr>
+
+
+                </table>
+
+                <table border=0 cellspacing=0 cellpadding=5 width=100%>
+                    <tr><th colspan=5 border=1 align="left"><h3>{{.ResultsHeading}}</h3></th></tr>
+                    <tr><th>Access</th><th>Perms</th><th>Created</th><th>Filename</th><th>Title</th></tr>
+
+
+                    {{- range $n := .Nodes}}
+
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td>{{$n.Created}}</td>
+                        <td> <a href='{{$n.URL}}'>{{$n.Name}}</a> </td>
+                        <td></td>
+                    </tr>
+
+                    {{- end}}
+                </table>
+
+                <script>
+
+                    const year_field = document.getElementById('session_year');
+                                        const session_title_field = document.getElementById('session_title');
+                                        const session_filename_field = document.getElementById('session_filename');
+
+                                        const title_field = document.getElementById('title');
+                                        const filename_field = document.getElementById('filename');
+
+                                        title_field.addEventListener('input', input_title);
+                                        session_title_field.addEventListener('input', input_session_title);
+                                        filename_field.addEventListener('input', update_filename);
+
+                                        function input_session_title(event) {
+                                                                var filename = "mcp-" + {{.NextNum}} + "-nomcon-" + year_field.value + "-" + session_title_field.value;
+                                                                session_filename_field.value = filename;
+                                                                update_filename(session_filename_field, event);
+                                                            }
+
+                                        function input_title(event) {
+                                                                var filename = "mcp-" + {{.NextNum}} + "-" + title_field.value;
+                                                                filename_field.value = filename;
+                                                                update_filename(filename_field, event);
+                                                            }
+
+                                        function update_filename(field, event) {
+                                                                var filename = field.value;
+                                                                var m = filename.match(/^mcp-(\d+)/);
+                                                                if (!m || m[1] != {{.NextNum}}) filename = "mcp-" + {{.NextNum}};
+                                                                filename = filename.toLowerCase();
+                                                                filename = filename.replace(/\W/g, '-');
+                                                                filename = filename.replace(/-+/g, '-');
+                                                                field.value = filename;
+                                                            }
+
+                                        function fill_title(node) {
+                                                                // console.log(node);
+                                                                var title_cell = document.getElementById("num" + node.num);
+                                                                title_cell.textContent = node.title;
+                                                            }          
+
+                </script>
+
+    </body>
+</html>
+

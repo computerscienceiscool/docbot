@@ -24,6 +24,7 @@ type Conf struct {
 	Template        string
 	SessionTemplate string `json:"session_template"`
 	Url             string
+	Listen          string
 	MinNextNum      int
 }
 

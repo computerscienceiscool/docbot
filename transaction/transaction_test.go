@@ -98,7 +98,7 @@ func TestMkDoc(t *testing.T) {
 	Tassert(t, err == nil, err)
 	err = r.ParseForm()
 	Tassert(t, err == nil, err)
-	node, err := tx.Opendoc(r, template, fn, baseUrl)
+	node, err := tx.Opendoc(r, template, fn, baseUrl, title)
 	Tassert(t, err == nil, err)
 	Tassert(t, node != nil)
 
@@ -134,7 +134,7 @@ func TestMkSessionDoc(t *testing.T) {
 	Tassert(t, err == nil, err)
 	err = r.ParseForm()
 	Tassert(t, err == nil, err)
-	node, err := tx.Opendoc(r, sessionTemplate, fn, baseUrl)
+	node, err := tx.Opendoc(r, sessionTemplate, fn, baseUrl, title)
 	Tassert(t, err == nil, err)
 	Tassert(t, node != nil)
 

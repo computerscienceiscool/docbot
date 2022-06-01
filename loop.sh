@@ -28,19 +28,22 @@ do
 	killpid
 	sleep 1
 
-	go vet ./... || continue
+	if ! go vet ./... 
+	then 
+		wmctrl -ia $winid
+	fi
 
-	wmctrl -ia $winid
 	padsp signalgen -t 100m sin 330 # E4 
 
-	go test -v ./... -coverprofile=/tmp/got.out -coverpkg=./... || continue
-	padsp signalgen -t 100m sin 392 # G4
-	# continue # XXX 
-	goenv exec go tool cover -html=/tmp/got.out -o /tmp/got.html
-	xdg-open /tmp/got.html
-	sleep 1
+	# go test -v ./... -coverprofile=/tmp/got.out -coverpkg=./... || continue
+	# padsp signalgen -t 100m sin 392 # G4
+	## continue 
 
-	if ! go run . ls 
+	# goenv exec go tool cover -html=/tmp/got.out -o /tmp/got.html
+	# xdg-open /tmp/got.html
+	# sleep 1
+
+	if false && ! go run . ls 
 	then
 		echo "FAIL ls"
 		padsp signalgen -t 100m sin 220 # A3
@@ -50,7 +53,7 @@ do
 
 	go run . serve &
 	sleep 3
-	if ! kill -0 $(cat $pidfn) 
+	if ! killall -0 docbot
 	then
 		echo "FAIL server start"
 		padsp signalgen -t 100m sin 220 # A3

@@ -1,15 +1,16 @@
 image = docbot
 tag = 0.0
-imagefq = us.gcr.io/fleet-cirrus-766/$(image):$(tag)
+# imagefq = us.gcr.io/fleet-cirrus-766/$(image):$(tag)
+imagefq = stevegt/$(image):$(tag)
 host = mcp.systems
 
-token = $(shell gcloud auth application-default print-access-token)
-# iid = $(shell ssh $(build_host) docker images -q | head -1)
+# token = $(shell gcloud auth application-default print-access-token)
 
 all:
 
 login:
-	docker login -u oauth2accesstoken -p $(token) https://us.gcr.io
+	# docker login -u oauth2accesstoken -p $(token) https://us.gcr.io
+	docker login 
 
 build: 
 	go vet ./...
@@ -18,7 +19,7 @@ build:
 	docker build -t $(imagefq) .
 
 push: build
-	test `git status --porcelain | wc -l` -eq 0
+	# test `git status --porcelain | wc -l` -eq 0
 	docker push $(imagefq)
 
 run: 
@@ -36,8 +37,13 @@ clean: stop
 stop:
 	- ssh $(host) docker stop $(image)
 
+rm:
+	- ssh $(host) docker rm $(image)
+
 start:
 	ssh $(host) docker start $(image)
+
+restart: stop rm run
 
 bash:
 	ssh -t $(host) docker exec -it $(image) bash

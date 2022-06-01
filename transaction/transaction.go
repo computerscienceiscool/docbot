@@ -132,21 +132,21 @@ func (tx *Transaction) cachenode(node *google.Node) (err error) {
 
 // open or create file
 // XXX pass in opts struct instead of http.Request
-func (tx *Transaction) Opendoc(r *http.Request, template, filename, baseUrl string) (node *google.Node, err error) {
+func (tx *Transaction) Opendoc(r *http.Request, template, filename, baseUrl, title string) (node *google.Node, err error) {
 	defer Return(&err)
 	node, err = tx.Getnode(filename)
 	Ck(err)
 	if node == nil {
 		// file doesn't exist -- create it
-		node, err = tx.mkdoc(r, template, filename, baseUrl)
+		node, err = tx.mkdoc(r, template, filename, baseUrl, title)
 		Ck(err)
-		Assert(node != nil, "%s, %s, %s", template, filename, r.Form.Get("title"))
+		Assert(node != nil, "%s, %s, %s", template, filename, title)
 	}
 	return
 }
 
 // create file
-func (tx *Transaction) mkdoc(r *http.Request, template, filename, baseUrl string) (node *google.Node, err error) {
+func (tx *Transaction) mkdoc(r *http.Request, template, filename, baseUrl, title string) (node *google.Node, err error) {
 	defer Return(&err)
 	// get template
 	Assert(len(template) > 0)
@@ -157,7 +157,6 @@ func (tx *Transaction) mkdoc(r *http.Request, template, filename, baseUrl string
 	node, err = tx.Copy(tnode, filename)
 	Ck(err)
 
-	title := r.Form.Get("title")
 	date := r.Form.Get("session_date")
 	speakers := r.Form.Get("session_speakers")
 
@@ -181,16 +180,21 @@ func (tx *Transaction) mkdoc(r *http.Request, template, filename, baseUrl string
 	}
 	batch := tx.gf.BatchStart()
 	batch.ReplaceAllTextRequest(parms)
-	el, err := tx.gf.FindTextRun(node, "UNLOCK_URL")
-	Ck(err)
-	if el != nil {
-		batch.UpdateLinkRequest(el, unlockUrl)
-	}
 	res, err := batch.Run(node)
 	Ck(err)
-
-	// Pprint(res)
+	// XXX
 	_ = res
+
+	el, err := tx.gf.FindTextRun(node, unlockUrl)
+	Ck(err)
+	if el != nil {
+		batch := tx.gf.BatchStart()
+		batch.UpdateLinkRequest(el, unlockUrl)
+		res, err := batch.Run(node)
+		Ck(err)
+		// XXX
+		_ = res
+	}
 
 	return
 }

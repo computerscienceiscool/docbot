@@ -1,154 +1,106 @@
 <html>
     <body>
+        {{template "head.html" .}}
 
-        <table border=1 cellspacing=0 cellpadding=5>
-            <tr>
-                <td>
-                    <font size=-1>
-
-                        I wrote this code in Javascript for NOMCON
-                        2018, updated it for NOMCON 2020 and 2021,
-                        translated it to Go and migrated it to GCP for
-                        NOMCON 2022.  Feel free to see me for details,
-                        and help us form a consensus around
-                        longer-term plans for hosting and managing
-                        this document series.  You can find me during
-                        the conference in Gather, @stevegt in NoM
-                        slack, in an emergency at +1-650-868-6358
-                        (Pacific time), or after the conference
-                        stevegt@t7a.org. 
-
-                        Hosting and my time are funded by <a
-                        href="http://t7a.org">t7a.org</a> and its
-                        member companies.  -- Steve Traugott 
-
-                    </font>
-
-                </td></tr></table>
-                <table bgcolor=#16568F cellspacing=0 cellpadding=10 border=0 width=100%>
+        <table border=1 cellspacing=0 cellpadding=10 width=100%>
+                <tr><td colspan=2>
+                        <center><a href="https://www.nomcon.org/schedule">NOMCON 2022 Schedule</a> -- includes links to session and working group docs.</center>
+                    </td></tr>
                     <tr><td>
-                            <font color="white">
-                                <h1>Maker Community Practices</h1>
-                                <h2>NoM working groups, community calls, and NOMCON session notes</h2>
-                            </font>
-                        </td></tr>
-                </table>
-                <center>
-                    Overview of series:  <a href="http://bit.ly/mcp-0-readme">http://bit.ly/mcp-0-readme</a>
-                    | Gdrive direct access:  <a href="http://bit.ly/nom-mcp">http://bit.ly/nom-mcp</a>
-                    | This page: <a href="http://bit.ly/mcp-index">http://bit.ly/mcp-index</a>
-                </center>
-                <table border=0 cellspacing=0 cellpadding=5 width=100%>
-                    <tr><td>
-                            <hr>
-                            <center><a href="https://nomcon2021.sched.com/?iframe=no">NOMCON 2021 Schedule</a> -- includes links to session and working group docs.</center>
+                            <h2>Create new NOMCON session document</h2>
+                            <form action="{{.URL}}" method='get'>
+                                <table border=0 cellspacing=0 cellpadding=10>
+
+                                    <tr><td align="right">NOMCON year:</td>
+                                        <td><input type="text" id="session_year" name="session_year" size=6 value="{{.YYYY}}"></td>
+                                    </tr>
+                                    <tr><td align="right">Session title:</td><td><input type="text" id="session_title" name="session_title" size=80></td></tr>
+                                    <tr><td align="right">Filename:</td><td><input type="text" id="session_filename" name="session_filename" size=80 value="mcp-{{.NextNum}}"></td></tr>
+
+                                    <tr><td colspan=2 align=center><input type="submit" value="Create session doc"></td></tr>
+
+                                </table>
+                            </form>
+                        </td>
+
+                        <td>
+                            <h2>Create new call, working group, or other miscellaneous document</h2>
+                            <form action="{{.URL}}" method='get'>
+                                <table border=0 cellspacing=0 cellpadding=10>
+                                    <tr><td>Document title (a few words):</td><td><input type="text" id="title" name="title" size=40></td></tr>
+                                    <tr><td align="right">Filename:</td><td><input type="text" id="filename" name="filename" size=40 value="mcp-{{.NextNum}}"></td></tr>
+                                    <tr><td colspan=2 align=center><input type="submit" value="Create doc"></td></tr>
+                                </table>
+                            </form>
                         </td></tr>
 
-                        <tr><td>
-                                <hr>
-                                <h2>Create new NOMCON session document</h2>
-                                <form action="{{.URL}}" method='get'>
-                                    <table border=0 cellspacing=0 cellpadding=10>
+        </table>
 
-                                        <tr><td align="right">NOMCON year:</td>
-                                            <td><input type="text" id="session_year" name="session_year" size=6 value="{{.YYYY}}"></td>
-                                        </tr>
-                                        <tr><td align="right">Session title:</td><td><input type="text" id="session_title" name="session_title" size=80></td></tr>
-                                        <tr><td align="right">Filename:</td><td><input type="text" id="session_filename" name="session_filename" size=80 value="mcp-{{.NextNum}}"></td></tr>
+        <p>
 
-                                        <tr><td colspan=2 align=center><input type="submit" value="Create session doc"></td></tr>
+        <h3>How to get help:</h3>
 
-                                    </table>
-                                </form>
-                            </td></tr>
+        You can find me during the
+        conference in Gather, @stevegt in NoM slack, in an emergency
+        at +1-650-868-6358 (Pacific time), or after the conference
+        stevegt@t7a.org. 
 
-                            <tr><td>
-                                    <hr>
-                                    <h2>Create new call, working group, or other miscellaneous document</h2>
-                                    <form action="{{.URL}}" method='get'>
-                                        <table border=0 cellspacing=0 cellpadding=10>
-                                            <tr><td>Document title (a few words):</td><td><input type="text" id="title" name="title" size=40></td></tr>
-                                            <tr><td align="right">Filename:</td><td><input type="text" id="filename" name="filename" size=40 value="mcp-{{.NextNum}}"></td></tr>
-                                            <tr><td colspan=2 align=center><input type="submit" value="Create doc"></td></tr>
-                                        </table>
-                                    </form>
-                                </td></tr>
+        <h3>About:</h3> 
 
-                                <tr><td>
-                                        <hr>
-                                        <h2>Search for documents</h2>
-                                        <form action="{{.URL}}" method='get'>
-                                            <table border=0 cellspacing=0 cellpadding=10>
-                                                <tr><td>Find documents containing all of these words:</td><td><input type="text" id="query" name="query" value="{{.SearchQuery}}" size=60></td></tr>
-                                                <tr><td colspan=2 align=center><input type="submit" value="Search"></td></tr>
-                                            </table>
-                                        </form>
-                                        <hr>
-                                    </td></tr>
+        I started the MCP series in 2016, created an earlier version
+        of this site for NOMCON 2018, updated it for NOMCON 2020 and
+        2021, and translated it to Go while migrating it to better
+        hosting at GCP for NOMCON 2022.  Feel free to see me for
+        details, and help us form a consensus around longer-term plans
+        for hosting and managing this document series.  
+
+        <p>
+
+        Hosting and my time are funded by <a href="http://t7a.org">t7a.org</a> and its member companies.  -- Steve Traugott 
 
 
-                </table>
+        <script>
 
-                <table border=0 cellspacing=0 cellpadding=5 width=100%>
-                    <tr><th colspan=5 border=1 align="left"><h3>{{.ResultsHeading}}</h3></th></tr>
-                    <tr><th>Access</th><th>Perms</th><th>Created</th><th>Filename</th><th>Title</th></tr>
+const year_field = document.getElementById('session_year');
+            const session_title_field = document.getElementById('session_title');
+            const session_filename_field = document.getElementById('session_filename');
 
+            const title_field = document.getElementById('title');
+            const filename_field = document.getElementById('filename');
 
-                    {{- range $n := .Nodes}}
+            title_field.addEventListener('input', input_title);
+            session_title_field.addEventListener('input', input_session_title);
+            filename_field.addEventListener('input', update_filename);
 
-                    <tr>
-                        <td></td>
-                        <td></td>
-                        <td>{{$n.Created}}</td>
-                        <td> <a href='{{$n.URL}}'>{{$n.Name}}</a> </td>
-                        <td></td>
-                    </tr>
+            function input_session_title(event) {
+            var filename = "mcp-" + {{.NextNum}} + "-nomcon-" + year_field.value + "-" + session_title_field.value;
+            session_filename_field.value = filename;
+            update_filename(session_filename_field, event);
+        }
 
-                    {{- end}}
-                </table>
+            function input_title(event) {
+            var filename = "mcp-" + {{.NextNum}} + "-" + title_field.value;
+            filename_field.value = filename;
+            update_filename(filename_field, event);
+        }
 
-                <script>
+            function update_filename(field, event) {
+            var filename = field.value;
+            var m = filename.match(/^mcp-(\d+)/);
+            if (!m || m[1] != {{.NextNum}}) filename = "mcp-" + {{.NextNum}};
+            filename = filename.toLowerCase();
+            filename = filename.replace(/\W/g, '-');
+            filename = filename.replace(/-+/g, '-');
+            field.value = filename;
+        }
 
-                    const year_field = document.getElementById('session_year');
-                                        const session_title_field = document.getElementById('session_title');
-                                        const session_filename_field = document.getElementById('session_filename');
+            function fill_title(node) {
+            // console.log(node);
+            var title_cell = document.getElementById("num" + node.num);
+            title_cell.textContent = node.title;
+        }          
 
-                                        const title_field = document.getElementById('title');
-                                        const filename_field = document.getElementById('filename');
-
-                                        title_field.addEventListener('input', input_title);
-                                        session_title_field.addEventListener('input', input_session_title);
-                                        filename_field.addEventListener('input', update_filename);
-
-                                        function input_session_title(event) {
-                                                                var filename = "mcp-" + {{.NextNum}} + "-nomcon-" + year_field.value + "-" + session_title_field.value;
-                                                                session_filename_field.value = filename;
-                                                                update_filename(session_filename_field, event);
-                                                            }
-
-                                        function input_title(event) {
-                                                                var filename = "mcp-" + {{.NextNum}} + "-" + title_field.value;
-                                                                filename_field.value = filename;
-                                                                update_filename(filename_field, event);
-                                                            }
-
-                                        function update_filename(field, event) {
-                                                                var filename = field.value;
-                                                                var m = filename.match(/^mcp-(\d+)/);
-                                                                if (!m || m[1] != {{.NextNum}}) filename = "mcp-" + {{.NextNum}};
-                                                                filename = filename.toLowerCase();
-                                                                filename = filename.replace(/\W/g, '-');
-                                                                filename = filename.replace(/-+/g, '-');
-                                                                field.value = filename;
-                                                            }
-
-                                        function fill_title(node) {
-                                                                // console.log(node);
-                                                                var title_cell = document.getElementById("num" + node.num);
-                                                                title_cell.textContent = node.title;
-                                                            }          
-
-                </script>
+        </script>
 
     </body>
 </html>
