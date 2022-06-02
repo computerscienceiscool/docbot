@@ -70,19 +70,23 @@ type Page struct {
 	Nodes          []*google.Node
 	YYYY           string
 	NextNum        int
-	URL            string
+	BaseURL        string
+	PageURL        string
+	SearchURL      string
 	SearchQuery    string
 	ResultsHeading string
 }
 
-// XXX deprecate
-/*
-func render(w http.ResponseWriter, name string, p *Page) {
-	t, err := template.ParseFS(fs, Spf("template/%s.html", name))
-	err = t.Execute(w, p)
-	ckw(w, err)
+func newPage(s *server, uri string) (p *Page) {
+	p = &Page{
+		BaseURL:   s.b.Conf.Url,
+		PageURL:   Spf("%s%s", s.b.Conf.Url, uri),
+		SearchURL: Spf("%s/search", s.b.Conf.Url),
+		// "01/02 03:04:05PM '06 -0700"
+		YYYY: time.Now().Format("2006"),
+	}
+	return p
 }
-*/
 
 func (s *server) index(w http.ResponseWriter, r *http.Request) {
 	defer logw(r.URL)
@@ -115,9 +119,7 @@ func (s *server) index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p := &Page{URL: s.b.Conf.Url}
-	// "01/02 03:04:05PM '06 -0700"
-	p.YYYY = time.Now().Format("2006")
+	p := newPage(s, "/")
 
 	p.SearchQuery = r.Form.Get("query")
 	if p.SearchQuery == "" {
@@ -149,9 +151,7 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 	tx := s.b.StartTransaction()
 	defer tx.Close()
 
-	p := &Page{URL: s.b.Conf.Url}
-	// "01/02 03:04:05PM '06 -0700"
-	p.YYYY = time.Now().Format("2006")
+	p := newPage(s, "/search")
 
 	p.SearchQuery = r.Form.Get("query")
 	if p.SearchQuery == "" {

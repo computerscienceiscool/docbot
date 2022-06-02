@@ -28,13 +28,11 @@ do
 	killpid
 	sleep 1
 
-	if ! go vet ./... 
-	then 
-		wmctrl -ia $winid
-	fi
+	go vet ./... || continue
 
 	padsp signalgen -t 100m sin 330 # E4 
 
+	# wmctrl -ia $winid
 	# go test -v ./... -coverprofile=/tmp/got.out -coverpkg=./... || continue
 	# padsp signalgen -t 100m sin 392 # G4
 	## continue 

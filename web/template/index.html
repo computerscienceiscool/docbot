@@ -3,36 +3,33 @@
         {{template "head.html" .}}
 
         <table border=1 cellspacing=0 cellpadding=10 width=100%>
-                <tr><td colspan=2>
-                        <center><a href="https://www.nomcon.org/schedule">NOMCON 2022 Schedule</a> -- includes links to session and working group docs.</center>
+                <tr><td>
+                        <h2>Create new NOMCON session document</h2>
+                        <form action="{{.BaseURL}}" method='get'>
+                            <table border=0 cellspacing=0 cellpadding=10>
+
+                                <tr><td align="right">NOMCON year:</td>
+                                    <td><input type="text" id="session_year" name="session_year" size=6 value="{{.YYYY}}"></td>
+                                </tr>
+                                <tr><td align="right">Session title:</td><td><input type="text" id="session_title" name="session_title" size=80></td></tr>
+                                <tr><td align="right">Filename:</td><td><input type="text" id="session_filename" name="session_filename" size=80 value="mcp-{{.NextNum}}"></td></tr>
+
+                                <tr><td colspan=2 align=center><input type="submit" value="Create session doc"></td></tr>
+
+                            </table>
+                        </form>
+                    </td>
+
+                    <td>
+                        <h2>Create new call, working group, or other miscellaneous document</h2>
+                        <form action="{{.BaseURL}}" method='get'>
+                            <table border=0 cellspacing=0 cellpadding=10>
+                                <tr><td>Document title (a few words):</td><td><input type="text" id="title" name="title" size=40></td></tr>
+                                <tr><td align="right">Filename:</td><td><input type="text" id="filename" name="filename" size=40 value="mcp-{{.NextNum}}"></td></tr>
+                                <tr><td colspan=2 align=center><input type="submit" value="Create doc"></td></tr>
+                            </table>
+                        </form>
                     </td></tr>
-                    <tr><td>
-                            <h2>Create new NOMCON session document</h2>
-                            <form action="{{.URL}}" method='get'>
-                                <table border=0 cellspacing=0 cellpadding=10>
-
-                                    <tr><td align="right">NOMCON year:</td>
-                                        <td><input type="text" id="session_year" name="session_year" size=6 value="{{.YYYY}}"></td>
-                                    </tr>
-                                    <tr><td align="right">Session title:</td><td><input type="text" id="session_title" name="session_title" size=80></td></tr>
-                                    <tr><td align="right">Filename:</td><td><input type="text" id="session_filename" name="session_filename" size=80 value="mcp-{{.NextNum}}"></td></tr>
-
-                                    <tr><td colspan=2 align=center><input type="submit" value="Create session doc"></td></tr>
-
-                                </table>
-                            </form>
-                        </td>
-
-                        <td>
-                            <h2>Create new call, working group, or other miscellaneous document</h2>
-                            <form action="{{.URL}}" method='get'>
-                                <table border=0 cellspacing=0 cellpadding=10>
-                                    <tr><td>Document title (a few words):</td><td><input type="text" id="title" name="title" size=40></td></tr>
-                                    <tr><td align="right">Filename:</td><td><input type="text" id="filename" name="filename" size=40 value="mcp-{{.NextNum}}"></td></tr>
-                                    <tr><td colspan=2 align=center><input type="submit" value="Create doc"></td></tr>
-                                </table>
-                            </form>
-                        </td></tr>
 
         </table>
 
@@ -61,7 +58,7 @@
 
         <script>
 
-const year_field = document.getElementById('session_year');
+            const year_field = document.getElementById('session_year');
             const session_title_field = document.getElementById('session_title');
             const session_filename_field = document.getElementById('session_filename');
 
