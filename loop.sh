@@ -32,9 +32,9 @@ do
 
 	padsp signalgen -t 100m sin 330 # E4 
 
-	# wmctrl -ia $winid
-	# go test -v ./... -coverprofile=/tmp/got.out -coverpkg=./... || continue
-	# padsp signalgen -t 100m sin 392 # G4
+	wmctrl -ia $winid
+	go test -v ./... -coverprofile=/tmp/got.out -coverpkg=./... || continue
+	padsp signalgen -t 100m sin 392 # G4
 	## continue 
 
 	# goenv exec go tool cover -html=/tmp/got.out -o /tmp/got.html

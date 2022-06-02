@@ -45,7 +45,7 @@ func (b *Bot) Init() (err error) {
 	cbuf, err := ioutil.ReadFile(b.Credpath)
 	Ck(err)
 
-	b.repo, err = google.NewFolder(cbuf, b.Conf.Folderid, b.Conf.Docprefix, 900)
+	b.repo, err = google.NewFolder(cbuf, b.Conf.Folderid, b.Conf.Docprefix, b.Conf.MinNextNum)
 	Ck(err)
 
 	return

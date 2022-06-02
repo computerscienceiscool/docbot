@@ -12,11 +12,12 @@ import (
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/stevegt/docbot/google"
+	"github.com/stevegt/docbot/util"
 	. "github.com/stevegt/goadapt"
 )
 
 // regenerate testdata
-const regen bool = true
+const regen bool = false
 
 const (
 	credpath        = "../local/mcpbot-mcpbot-key.json"
@@ -48,7 +49,7 @@ func setup(t *testing.T) (tx *Transaction) {
 	cbuf, err := ioutil.ReadFile(credpath)
 	Tassert(t, err == nil, err)
 
-	gf, err := google.NewFolder(cbuf, folderId, "mcp", 900)
+	gf, err := google.NewFolder(cbuf, folderId, "mcp", util.MinTestNum)
 	Tassert(t, err == nil, err)
 
 	tx = Start(gf)
@@ -57,7 +58,7 @@ func setup(t *testing.T) (tx *Transaction) {
 	nodes, err := tx.AllNodes()
 	Tassert(t, err == nil, err)
 	for _, node := range nodes {
-		if node.Num() >= 900 {
+		if node.Num() >= util.MinTestNum {
 			err = tx.Rm(node)
 			if err != nil {
 				Pf("%v: %v\n", node.Name(), err)

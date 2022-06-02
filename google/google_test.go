@@ -6,6 +6,7 @@ import (
 
 	// "github.com/sergi/go-diff/diffmatchpatch"
 
+	"github.com/stevegt/docbot/util"
 	. "github.com/stevegt/goadapt"
 )
 
@@ -32,7 +33,7 @@ func setup(t *testing.T) (gf *Folder) {
 	cbuf, err := ioutil.ReadFile(credpath)
 	Tassert(t, err == nil, err)
 
-	gf, err = NewFolder(cbuf, folderId, "mcp", 900)
+	gf, err = NewFolder(cbuf, folderId, "mcp", util.MinTestNum)
 	Tassert(t, err == nil, err)
 
 	return

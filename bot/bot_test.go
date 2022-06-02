@@ -6,6 +6,7 @@ import (
 
 	// "github.com/sergi/go-diff/diffmatchpatch"
 
+	"github.com/stevegt/docbot/util"
 	. "github.com/stevegt/goadapt"
 )
 
@@ -45,7 +46,7 @@ func cleanup(t *testing.T, b *Bot) {
 		Tassert(t, err == nil, err)
 		fail := false
 		for _, node := range nodes {
-			if node.Num() >= 900 {
+			if node.Num() >= util.MinTestNum {
 				err = tx.Rm(node)
 				if err != nil {
 					Pf("cleanup: %v: %v\n", node.Name(), err)
