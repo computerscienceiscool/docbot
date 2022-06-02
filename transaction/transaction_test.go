@@ -17,10 +17,10 @@ import (
 )
 
 // regenerate testdata
-const regen bool = false
+const regen bool = true
 
 const (
-	credpath        = "../local/mcpbot-mcpbot-key.json"
+	credpath        = "../local/docbot-mcpbot-key.json"
 	folderId        = "1HcCIw7ppJZPD9GEHccnkgNYUwhAGCif6"
 	template        = "mcp-template"
 	sessionTemplate = "session-template"
@@ -99,7 +99,7 @@ func TestMkDoc(t *testing.T) {
 	Tassert(t, err == nil, err)
 	err = r.ParseForm()
 	Tassert(t, err == nil, err)
-	node, err := tx.Opendoc(r, template, fn, baseUrl, title)
+	node, err := tx.OpenCreate(r, template, fn, baseUrl, title)
 	Tassert(t, err == nil, err)
 	Tassert(t, node != nil)
 
@@ -135,7 +135,7 @@ func TestMkSessionDoc(t *testing.T) {
 	Tassert(t, err == nil, err)
 	err = r.ParseForm()
 	Tassert(t, err == nil, err)
-	node, err := tx.Opendoc(r, sessionTemplate, fn, baseUrl, title)
+	node, err := tx.OpenCreate(r, sessionTemplate, fn, baseUrl, title)
 	Tassert(t, err == nil, err)
 	Tassert(t, node != nil)
 

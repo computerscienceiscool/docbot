@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -130,15 +131,53 @@ func (tx *Transaction) cachenode(node *google.Node) (err error) {
 	return
 }
 
+// open single file with name matching prefix
+func (tx *Transaction) OpenPrefix(prefix string) (node *google.Node, err error) {
+	defer Return(&err)
+	var found []*google.Node
+
+	/*
+		// XXX this should work per https://developers.google.com/drive/api/v3/reference/files/list?apix=true&apix_params=%7B%22q%22%3A%22%271HcCIw7ppJZPD9GEHccnkgNYUwhAGCif6%27%20in%20parents%20and%20name%20contains%20%27mcp-3-%27%22%7D#try-it
+		// XXX but am getting "invalid query"
+		q := Spf("name contains '%s'", prefix)
+		nodes, err := tx.FindNodes(q)
+		Ck(err)
+		for _, n := range nodes {
+			if strings.HasPrefix(n.Name(), prefix) {
+				found = append(found, n)
+			}
+		}
+	*/
+
+	err = tx.loadNodes()
+	Ck(err)
+	for _, n := range tx.byname {
+		if strings.HasPrefix(n.Name(), prefix) {
+			found = append(found, n)
+		}
+	}
+
+	if len(found) != 1 {
+		return nil, nil
+	}
+	node = found[0]
+
+	perms, err := tx.gf.GetPermissionList(node.Id())
+	Ck(err)
+	Pprint(perms)
+
+	return
+}
+
 // open or create file
 // XXX pass in opts struct instead of http.Request
-func (tx *Transaction) Opendoc(r *http.Request, template, filename, baseUrl, title string) (node *google.Node, err error) {
+func (tx *Transaction) OpenCreate(r *http.Request, template, filename, unlockPrefix, title string) (node *google.Node, err error) {
 	defer Return(&err)
 	node, err = tx.Getnode(filename)
 	Ck(err)
 	if node == nil {
 		// file doesn't exist -- create it
-		node, err = tx.mkdoc(r, template, filename, baseUrl, title)
+		node, err = tx.mkdoc(r, template, filename, unlockPrefix, title)
 		Ck(err)
 		Assert(node != nil, "%s, %s, %s", template, filename, title)
 	}
@@ -146,7 +185,7 @@ func (tx *Transaction) Opendoc(r *http.Request, template, filename, baseUrl, tit
 }
 
 // create file
-func (tx *Transaction) mkdoc(r *http.Request, template, filename, baseUrl, title string) (node *google.Node, err error) {
+func (tx *Transaction) mkdoc(r *http.Request, template, filename, unlockPrefix, title string) (node *google.Node, err error) {
 	defer Return(&err)
 	// get template
 	Assert(len(template) > 0)
@@ -163,12 +202,13 @@ func (tx *Transaction) mkdoc(r *http.Request, template, filename, baseUrl, title
 	v := url.Values{}
 	v.Set("filename", node.Name())
 	v.Set("unlock", "t")
-	unlockUrl := Spf("%s?%s", baseUrl, v.Encode())
 
 	if len(title) == 0 {
 		// XXX handle
 		log.Printf("missing title: %s, %v", r.URL, r.Form)
 	}
+
+	unlockUrl := Spf("%s-%d", unlockPrefix, node.Num())
 
 	// generate update requests
 	parms := map[string]string{
@@ -222,6 +262,13 @@ func (tx *Transaction) Copy(tnode *google.Node, newName string) (node *google.No
 	node, err = tx.gf.Copy(tnode, newName)
 	Ck(err)
 	err = tx.cachenode(node)
+	Ck(err)
+	return
+}
+
+func (tx *Transaction) Unlock(node *google.Node) (err error) {
+	perm := tx.gf.CreateAnyonePermission("writer")
+	_, err = tx.gf.InsertPermission(node.Id(), perm)
 	Ck(err)
 	return
 }

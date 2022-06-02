@@ -11,7 +11,7 @@ RUN apt-get install -y ca-cacert ca-certificates
 # RUN apt-get install -y openssh-client autossh
 
 # copy selectively to avoid including secrets
-COPY docbot /root/docbot
 COPY supervisord.conf /etc/supervisor/supervisord.conf
+COPY docbot /root/docbot
 
 CMD /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf

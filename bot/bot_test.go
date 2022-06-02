@@ -14,7 +14,7 @@ import (
 const regen bool = false
 
 const confpath = "testdata/docbot.conf"
-const credpath = "../local/mcpbot-mcpbot-key.json"
+const credpath = "../local/docbot-mcpbot-key.json"
 
 /*
 func TestMain(m *testing.M) {

@@ -21,8 +21,9 @@ func (gf *Folder) CreateUserPermission(email string, role string) *drive.Permiss
 
 func (gf *Folder) CreateAnyonePermission(role string) *drive.Permission {
 	return &drive.Permission{
-		Role: role,
-		Type: "anyone",
+		Role:     role,
+		Type:     "anyone",
+		WithLink: true,
 	}
 }
 

@@ -213,7 +213,7 @@ func (gf *Folder) QueryNodes(query string) (nodes []*Node, err error) {
 		}
 
 		res, err := q.Do()
-		Ck(err)
+		Ck(err, query)
 
 		for _, f := range res.Items {
 			// f is a *drive.File

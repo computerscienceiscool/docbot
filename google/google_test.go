@@ -14,7 +14,7 @@ import (
 const regen bool = false
 
 const (
-	credpath = "../../local/mcpbot-mcpbot-key.json"
+	credpath = "../../local/docbot-mcpbot-key.json"
 	folderId = "1HcCIw7ppJZPD9GEHccnkgNYUwhAGCif6"
 	template = "mcp-template"
 )

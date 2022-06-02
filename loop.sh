@@ -15,7 +15,7 @@ winid=$(getwinid)
 base=$PWD
 
 export DOCBOT_CONF=bot/testdata/docbot.conf
-export DOCBOT_CRED=local/mcpbot-mcpbot-key.json
+export DOCBOT_CRED=local/docbot-mcpbot-key.json
 
 set -x
 while true
