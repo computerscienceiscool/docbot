@@ -1,6 +1,6 @@
 Name: mcp-911-test11
 Title: test 11
-Status: Draft -- anyone can edit. If edit access is off, go to http://example.com?filename=mcp-911-test11&unlock=t
+Status: Draft -- anyone can edit. If edit access is off, go to http://example.com-911
 
 The filename and the above headers are machine-readable; please preserve format and content.
 Other NoM and NOMCON sessions, call, and working group docs:  http://bit.ly/mcp-index

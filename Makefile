@@ -8,6 +8,8 @@ host = mcp.systems
 
 all:
 
+deploy: push restart tail
+
 login:
 	# docker login -u oauth2accesstoken -p $(token) https://us.gcr.io
 	docker login 
@@ -52,4 +54,4 @@ tail:
 	ssh -t $(host) docker exec -it $(image) supervisorctl tail -f docbot
 
 logs:
-	ssh -t $(host) docker logs $(image)
+	ssh -t $(host) docker logs -f $(image)

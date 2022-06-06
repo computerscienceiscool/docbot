@@ -14,7 +14,8 @@ trap "killpid; exit" SIGINT SIGTERM EXIT
 winid=$(getwinid)
 base=$PWD
 
-export DOCBOT_CONF=bot/testdata/docbot.conf
+# export DOCBOT_CONF=bot/testdata/docbot.conf
+export DOCBOT_CONF=local/prod-docbot.conf
 export DOCBOT_CRED=local/docbot-mcpbot-key.json
 
 set -x

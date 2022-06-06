@@ -88,7 +88,7 @@ func TestMkDoc(t *testing.T) {
 
 	fn := "mcp-910-test10"
 	title := "test 10"
-	baseUrl := "http://example.com"
+	unlockBase := "http://example.com/doc/mcp"
 	v := url.Values{}
 	v.Set("filename", fn)
 	v.Set("title", title)
@@ -99,7 +99,7 @@ func TestMkDoc(t *testing.T) {
 	Tassert(t, err == nil, err)
 	err = r.ParseForm()
 	Tassert(t, err == nil, err)
-	node, err := tx.OpenCreate(r, template, fn, baseUrl, title)
+	node, err := tx.OpenCreate(r, template, fn, unlockBase, title)
 	Tassert(t, err == nil, err)
 	Tassert(t, node != nil)
 
@@ -120,7 +120,7 @@ func TestMkSessionDoc(t *testing.T) {
 
 	fn := "mcp-911-test11"
 	title := "test 11"
-	baseUrl := "http://example.com"
+	unlockBase := "http://example.com/doc/mcp"
 	date := "02 Jan 2006"
 	speakers := "Alice Arms, Bob Barker, Carol Carnes"
 	v := url.Values{}
@@ -135,7 +135,7 @@ func TestMkSessionDoc(t *testing.T) {
 	Tassert(t, err == nil, err)
 	err = r.ParseForm()
 	Tassert(t, err == nil, err)
-	node, err := tx.OpenCreate(r, sessionTemplate, fn, baseUrl, title)
+	node, err := tx.OpenCreate(r, sessionTemplate, fn, unlockBase, title)
 	Tassert(t, err == nil, err)
 	Tassert(t, node != nil)
 

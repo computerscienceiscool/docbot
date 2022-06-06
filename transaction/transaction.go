@@ -164,7 +164,8 @@ func (tx *Transaction) OpenPrefix(prefix string) (node *google.Node, err error) 
 
 	perms, err := tx.gf.GetPermissionList(node.Id())
 	Ck(err)
-	Pprint(perms)
+	// Pprint(perms)
+	_ = perms
 
 	return
 }
@@ -227,7 +228,9 @@ func (tx *Transaction) mkdoc(r *http.Request, template, filename, unlockPrefix, 
 
 	el, err := tx.gf.FindTextRun(node, unlockUrl)
 	Ck(err)
-	if el != nil {
+	if el == nil {
+		log.Printf("unable to find/update link: %s", unlockUrl)
+	} else {
 		batch := tx.gf.BatchStart()
 		batch.UpdateLinkRequest(el, unlockUrl)
 		res, err := batch.Run(node)
