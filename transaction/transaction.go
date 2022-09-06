@@ -80,12 +80,26 @@ func (tx *Transaction) FindNodes(query string) (nodes []*google.Node, err error)
 	return
 }
 
-func (tx *Transaction) Getnode(fn string) (node *google.Node, err error) {
+func (tx *Transaction) GetByName(fn string) (node *google.Node, err error) {
 	defer Return(&err)
 	err = tx.loadNodes()
 	Ck(err)
 	// return nil if not found
 	node, _ = tx.byname[fn]
+	return
+}
+
+func (tx *Transaction) GetByNum(num int) (node *google.Node, err error) {
+	defer Return(&err)
+	err = tx.loadNodes()
+	Ck(err)
+	// return nil if not found
+	for fn, n := range tx.byname {
+		if n.Num() == num {
+			node, _ = tx.byname[fn]
+			break
+		}
+	}
 	return
 }
 
@@ -132,6 +146,7 @@ func (tx *Transaction) cachenode(node *google.Node) (err error) {
 }
 
 // open single file with name matching prefix
+// XXX refactor to OpenByNum
 func (tx *Transaction) OpenPrefix(prefix string) (node *google.Node, err error) {
 	defer Return(&err)
 	var found []*google.Node
@@ -162,6 +177,7 @@ func (tx *Transaction) OpenPrefix(prefix string) (node *google.Node, err error) 
 	}
 	node = found[0]
 
+	// XXX can this go away?
 	perms, err := tx.gf.GetPermissionList(node.Id())
 	Ck(err)
 	// Pprint(perms)

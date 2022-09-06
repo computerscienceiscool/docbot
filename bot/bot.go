@@ -3,6 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"io/ioutil"
+	"regexp"
 
 	"github.com/stevegt/docbot/google"
 	"github.com/stevegt/docbot/transaction"
@@ -29,12 +30,13 @@ type Conf struct {
 }
 
 type Bot struct {
-	Ls       bool
-	Serve    bool
-	Confpath string
-	Credpath string
-	Conf     *Conf
-	repo     *google.Folder
+	Ls         bool
+	Serve      bool
+	Confpath   string
+	Credpath   string
+	Conf       *Conf
+	repo       *google.Folder
+	docpattern *regexp.Regexp
 }
 
 func (b *Bot) Init() (err error) {
@@ -43,6 +45,10 @@ func (b *Bot) Init() (err error) {
 	Ck(err)
 
 	cbuf, err := ioutil.ReadFile(b.Credpath)
+	Ck(err)
+
+	pat := Spf("^%s-(\\d+)-", b.Conf.Docprefix)
+	b.docpattern, err = regexp.Compile(pat)
 	Ck(err)
 
 	b.repo, err = google.NewFolder(cbuf, b.Conf.Folderid, b.Conf.Docprefix, b.Conf.MinNextNum)

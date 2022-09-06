@@ -194,6 +194,7 @@ func (s *server) unlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// XXX move this to tx so we can unlock from cli
 	prefix := Spf("%s-", parts[2])
 	node, err := tx.OpenPrefix(prefix)
 	ckw(w, err)
@@ -226,6 +227,7 @@ func (s *server) doc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// XXX move this to tx so we can get google doc url via cli
 	prefix := Spf("%s-", parts[2])
 	node, err := tx.OpenPrefix(prefix)
 	ckw(w, err)

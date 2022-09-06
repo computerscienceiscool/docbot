@@ -83,7 +83,7 @@ type Folder struct {
 // NewFolder returns an object that represents a single gdrive folder.
 // We assume that the folder is accessible by the service account
 // json credentials provided in cbuf.
-func NewFolder(cbuf []byte, folderid, docPrefix string, minNextNum int) (gf *Folder, err error) {
+func NewFolder(cbuf []byte, folderid string, docPattern *regexp.Regexp, minNextNum int) (gf *Folder, err error) {
 	defer Return(&err)
 
 	gf = &Folder{id: folderid, MinNextNum: minNextNum}
@@ -96,9 +96,7 @@ func NewFolder(cbuf []byte, folderid, docPrefix string, minNextNum int) (gf *Fol
 	gf.drive, err = drive.NewService(ctx, option.WithCredentialsJSON(cbuf))
 	Ck(err)
 
-	pat := Spf("^%s-(\\d+)-", docPrefix)
-	gf.fnre, err = regexp.Compile(pat)
-	Ck(err)
+	gf.fnre = docPattern
 
 	return
 }
