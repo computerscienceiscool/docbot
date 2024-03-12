@@ -2,7 +2,7 @@ image = docbot
 tag = 0.0
 # imagefq = us.gcr.io/fleet-cirrus-766/$(image):$(tag)
 imagefq = stevegt/$(image):$(tag)
-host = mcp.systems
+host = mcp.infrastructures.org
 
 # token = $(shell gcloud auth application-default print-access-token)
 
