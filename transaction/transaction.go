@@ -190,7 +190,7 @@ func (tx *Transaction) OpenPrefix(prefix string) (node *google.Node, err error) 
 // XXX pass in opts struct instead of http.Request
 func (tx *Transaction) OpenCreate(r *http.Request, template, filename, unlockPrefix, title string) (node *google.Node, err error) {
 	defer Return(&err)
-	node, err = tx.Getnode(filename)
+	node, err = tx.GetByName(filename)
 	Ck(err)
 	if node == nil {
 		// file doesn't exist -- create it
@@ -206,7 +206,7 @@ func (tx *Transaction) mkdoc(r *http.Request, template, filename, unlockPrefix, 
 	defer Return(&err)
 	// get template
 	Assert(len(template) > 0)
-	tnode, err := tx.Getnode(template)
+	tnode, err := tx.GetByName(template)
 	Ck(err, template)
 	Assert(tnode != nil, template)
 
