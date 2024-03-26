@@ -68,7 +68,7 @@ func waitfor(b *Bot, fn string) {
 	tx := b.StartTransaction()
 	defer tx.Close()
 	for i := 0; i < 10; i++ {
-		node, err := tx.Getnode(fn)
+		node, err := tx.GetByName(fn)
 		if node != nil && err == nil {
 			break
 		}

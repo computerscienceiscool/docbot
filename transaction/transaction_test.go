@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 	"testing"
 	"time"
 
@@ -49,7 +50,7 @@ func setup(t *testing.T) (tx *Transaction) {
 	cbuf, err := ioutil.ReadFile(credpath)
 	Tassert(t, err == nil, err)
 
-	gf, err := google.NewFolder(cbuf, folderId, "mcp", util.MinTestNum)
+	gf, err := google.NewFolder(cbuf, folderId, regexp.MustCompile("^mcp$"), util.MinTestNum)
 	Tassert(t, err == nil, err)
 
 	tx = Start(gf)
