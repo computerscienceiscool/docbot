@@ -1,5 +1,5 @@
 image = docbot
-tag = 0.0
+tag = 1.0
 # imagefq = us.gcr.io/fleet-cirrus-766/$(image):$(tag)
 imagefq = stevegt/$(image):$(tag)
 host = mcp.infrastructures.org

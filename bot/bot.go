@@ -24,6 +24,7 @@ type Conf struct {
 	Docprefix       string
 	Template        string
 	SessionTemplate string `json:"session_template"`
+	CSWGTemplate    string `json:"cswg_template"`
 	Url             string
 	Listen          string
 	MinNextNum      int

@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -109,16 +110,20 @@ func (s *server) index(w http.ResponseWriter, r *http.Request) {
 	var tmpl string
 	var ofn string
 	var title string
-	fn := r.Form.Get("filename")
-	sfn := r.Form.Get("session_filename")
-	if fn != "" {
-		ofn = fn
+	doctype := r.Form.Get("doctype")
+	switch doctype {
+	case "misc":
+		ofn = r.Form.Get("filename")
 		title = r.Form.Get("title")
 		tmpl = s.b.Conf.Template
-	} else if sfn != "" {
-		ofn = sfn
+	case "nomcon":
+		ofn = r.Form.Get("session_filename")
 		title = r.Form.Get("session_title")
 		tmpl = s.b.Conf.SessionTemplate
+	case "cswg":
+		ofn = r.Form.Get("cswg_filename")
+		title = r.Form.Get("cswg_title")
+		tmpl = s.b.Conf.CSWGTemplate
 	}
 
 	nextNum, err := tx.NextNum()
@@ -166,6 +171,11 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 		ckw(w, err)
 		p.ResultsHeading = Spf("Search results for '%s':", p.SearchQuery)
 	}
+
+	// sort nodes by date, newest first
+	sort.Slice(p.Nodes, func(i, j int) bool {
+		return p.Nodes[i].Date.After(p.Nodes[j].Date)
+	})
 
 	err = s.t.ExecuteTemplate(w, "search.html", p)
 	ckw(w, err)
