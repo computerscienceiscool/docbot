@@ -52,7 +52,7 @@ func (b *Bot) Init() (err error) {
 	b.docpattern, err = regexp.Compile(pat)
 	Ck(err)
 
-	b.repo, err = google.NewFolder(cbuf, b.Conf.Folderid, regexp.MustCompile(Spf("^%s$", b.Conf.Docprefix)), b.Conf.MinNextNum)
+	b.repo, err = google.NewFolder(cbuf, b.Conf.Folderid, regexp.MustCompile(Spf("^%s-"+`(\d+)`, b.Conf.Docprefix)), b.Conf.MinNextNum)
 	Ck(err)
 
 	return

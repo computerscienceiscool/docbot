@@ -125,6 +125,10 @@ func (s *server) index(w http.ResponseWriter, r *http.Request) {
 		title = r.Form.Get("cswg_title")
 		tmpl = s.b.Conf.CSWGTemplate
 	}
+	log.Printf("r.URL: %s", r.URL)
+	log.Printf("r.Form: %v", r.Form)
+	log.Printf("doctype: %s ofn: %s title: %s", doctype, ofn, title)
+	log.Printf("tmpl: %s", tmpl)
 
 	nextNum, err := tx.NextNum()
 	ckw(w, err)
@@ -133,6 +137,7 @@ func (s *server) index(w http.ResponseWriter, r *http.Request) {
 	unlockPrefix := Spf("%s/%s", p.UnlockBase, s.b.Conf.Docprefix)
 
 	if tmpl != "" {
+		log.Printf("creating doc: %s: %s: %s", tmpl, ofn, title)
 		var node *google.Node
 		node, err = tx.OpenCreate(r, tmpl, ofn, unlockPrefix, title)
 		ckw(w, err)
@@ -172,9 +177,10 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 		p.ResultsHeading = Spf("Search results for '%s':", p.SearchQuery)
 	}
 
-	// sort nodes by date, newest first
+	// sort nodes by date, newest first.  dates are in RFC3339 format,
+	// so they sort correctly as strings.
 	sort.Slice(p.Nodes, func(i, j int) bool {
-		return p.Nodes[i].Date.After(p.Nodes[j].Date)
+		return p.Nodes[i].Created() > p.Nodes[j].Created()
 	})
 
 	err = s.t.ExecuteTemplate(w, "search.html", p)

@@ -194,6 +194,7 @@ func (tx *Transaction) OpenCreate(r *http.Request, template, filename, unlockPre
 	Ck(err)
 	if node == nil {
 		// file doesn't exist -- create it
+		log.Printf("creating new file: %s", filename)
 		node, err = tx.mkdoc(r, template, filename, unlockPrefix, title)
 		Ck(err)
 		Assert(node != nil, "%s, %s, %s", template, filename, title)

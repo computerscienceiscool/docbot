@@ -37,49 +37,6 @@
 			{{- end}}
 		</table>
 
-		<script>
-
-			const year_field = document.getElementById('session_year');
-						const session_title_field = document.getElementById('session_title');
-						const session_filename_field = document.getElementById('session_filename');
-
-						const title_field = document.getElementById('title');
-						const filename_field = document.getElementById('filename');
-
-						title_field.addEventListener('input', input_title);
-						session_title_field.addEventListener('input', input_session_title);
-						filename_field.addEventListener('input', update_filename);
-
-						function input_session_title(event) {
-										var filename = "mcp-" + {{.NextNum}} + "-nomcon-" + year_field.value + "-" + session_title_field.value;
-										session_filename_field.value = filename;
-										update_filename(session_filename_field, event);
-									}
-
-						function input_title(event) {
-										var filename = "mcp-" + {{.NextNum}} + "-" + title_field.value;
-										filename_field.value = filename;
-										update_filename(filename_field, event);
-									}
-
-						function update_filename(field, event) {
-										var filename = field.value;
-										var m = filename.match(/^mcp-(\d+)/);
-										if (!m || m[1] != {{.NextNum}}) filename = "mcp-" + {{.NextNum}};
-										filename = filename.toLowerCase();
-										filename = filename.replace(/\W/g, '-');
-										filename = filename.replace(/-+/g, '-');
-										field.value = filename;
-									}
-
-						function fill_title(node) {
-										// console.log(node);
-										var title_cell = document.getElementById("num" + node.num);
-										title_cell.textContent = node.title;
-									}          
-
-		</script>
-
 	</body>
 </html>
 

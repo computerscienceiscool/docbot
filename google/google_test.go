@@ -2,6 +2,7 @@ package google
 
 import (
 	"io/ioutil"
+	"regexp"
 	"testing"
 
 	// "github.com/sergi/go-diff/diffmatchpatch"
@@ -33,7 +34,7 @@ func setup(t *testing.T) (gf *Folder) {
 	cbuf, err := ioutil.ReadFile(credpath)
 	Tassert(t, err == nil, err)
 
-	gf, err = NewFolder(cbuf, folderId, "mcp", util.MinTestNum)
+	gf, err = NewFolder(cbuf, folderId, regexp.MustCompile("^mcp$"), util.MinTestNum)
 	Tassert(t, err == nil, err)
 
 	return

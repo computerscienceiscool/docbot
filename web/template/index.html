@@ -91,7 +91,7 @@
             title_field.addEventListener('input', input_title);
 
             function input_cswg_title(event) {
-                var filename = "mcp-" + {{.NextNum}} + "-" + cswg_title_field.value;
+                var filename = "mcp-" + {{.NextNum}} + "-cswg-workshop-" + cswg_title_field.value;
                 cswg_filename_field.value = filename;
                 update_filename(cswg_filename_field, event);
             }
