@@ -2,6 +2,7 @@ package web
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -63,10 +64,16 @@ func Serve(b *bot.Bot) (err error) {
 	http.HandleFunc("/doc/", s.doc)
 	http.HandleFunc("/unlock/", s.unlock)
 	http.HandleFunc("/search", s.search)
-	http.HandleFunc("/", s.index)
+	http.HandleFunc("/browse/", handleBrowse)   // allows browsing of different revisions
+	http.HandleFunc("/doc_html/", serveDocHTML) // serves the document HTML for gdoctools integration
+	http.Handle("/",
+		http.StripPrefix("/", http.FileServer(http.Dir("/tmp/gdoctools/"))))
+
+	//	http.HandleFunc("/", s.index)
+
 	listen := b.Conf.Listen
 	if listen == "" {
-		listen = ":80"
+		listen = ":8888"
 	}
 	err = http.ListenAndServe(listen, nil)
 	Ck(err)
@@ -255,4 +262,38 @@ func (s *server) doc(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, node.URL(), http.StatusFound)
 	return
+}
+
+// serveDocsIndex serves the docs_index.json file for gdoctools integration
+func serveDocsIndex(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	http.ServeFile(w, r, "/tmp/docs_index.json")
+}
+
+// serveDocHTML serves the document HTML for gdoctools integration
+func serveDocHTML(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	if len(parts) < 6 {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+	docname := parts[2]
+	rev := parts[4]
+	fullpath := fmt.Sprintf("/tmp/%s/Revision_%s/document.html", docname, rev)
+
+	w.Header().Set("Content-Type", "text/html")
+	http.ServeFile(w, r, fullpath)
+}
+
+// handleBrowse handles the browsing of different revisions
+func handleBrowse(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles(
+		"web/template/head.html",
+		"web/template/browse.html",
+	))
+	err := tmpl.ExecuteTemplate(w, "browse.html", nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

@@ -1,0 +1,68 @@
+
+{{template "head.html" .}}
+
+<h1>Document Browser (Latest + Revisions)</h1>
+<div id="doc-list">Loading...</div>
+
+<script>
+async function loadDocs() {
+  try {
+    const res = await fetch("/docs_index.json");
+    const docs = await res.json();
+    const container = document.getElementById("doc-list");
+    container.innerHTML = "";
+
+    docs.forEach(doc => {
+      const section = document.createElement("div");
+      section.style.marginBottom = "1em";
+
+      const title = document.createElement("h2");
+      title.textContent = doc.name;
+      section.appendChild(title);
+
+      if (doc.revisions.length === 0) {
+        const none = document.createElement("p");
+        none.textContent = "No revisions found.";
+        section.appendChild(none);
+        container.appendChild(section);
+        return;
+      }
+
+      const latest = doc.revisions[doc.revisions.length - 1];
+      const latestLink = document.createElement("a");
+      latestLink.href = "/" + latest.path;
+      latestLink.textContent = "Latest (rev " + latest.rev_index + ")";
+      section.appendChild(latestLink);
+
+      const toggle = document.createElement("button");
+      toggle.textContent = "Show all revisions";
+      toggle.style.marginLeft = "1em";
+      toggle.onclick = () => {
+        revList.hidden = !revList.hidden;
+        toggle.textContent = revList.hidden ? "Show all revisions" : "Hide revisions";
+      };
+      section.appendChild(toggle);
+
+      const revList = document.createElement("div");
+      revList.hidden = true;
+      revList.style.marginTop = "0.5em";
+
+      doc.revisions.forEach(rev => {
+        const revLink = document.createElement("a");
+        revLink.href = "/" + rev.path;
+        revLink.textContent = "[rev " + rev.rev_index + "]";
+        revLink.style.marginRight = "8px";
+        revList.appendChild(revLink);
+      });
+
+      section.appendChild(revList);
+      container.appendChild(section);
+    });
+  } catch (err) {
+    document.getElementById("doc-list").textContent = "Failed to load docs_index.json";
+    console.error(err);
+  }
+}
+
+loadDocs();
+</script>

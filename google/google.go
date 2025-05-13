@@ -1,7 +1,6 @@
 package google
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -11,7 +10,6 @@ import (
 	. "github.com/stevegt/goadapt"
 	"google.golang.org/api/docs/v1"
 	"google.golang.org/api/drive/v2"
-	"google.golang.org/api/option"
 )
 
 /*
@@ -83,6 +81,7 @@ type Folder struct {
 // NewFolder returns an object that represents a single gdrive folder.
 // We assume that the folder is accessible by the service account
 // json credentials provided in cbuf.
+/*
 func NewFolder(cbuf []byte, folderid string, docPattern *regexp.Regexp, minNextNum int) (gf *Folder, err error) {
 	defer Return(&err)
 
@@ -99,6 +98,15 @@ func NewFolder(cbuf []byte, folderid string, docPattern *regexp.Regexp, minNextN
 	gf.fnre = docPattern
 
 	return
+}
+*/
+
+// replaced above function for testing gdoctools integration with local HTML files
+func NewFolder(cbuf []byte, folderid string, docPattern *regexp.Regexp, minNextNum int) (gf *Folder, err error) {
+	defer Return(&err)
+
+	// TEMPORARY bypass for local HTML testing
+	return &Folder{}, nil
 }
 
 func (gf *Folder) Doc2json(node *Node) (buf []byte, err error) {
