@@ -9,6 +9,13 @@ async function loadDocs() {
   try {
     const res = await fetch("/docs_index.json");
     const docs = await res.json();
+
+    // Sort alphabetically by name (case-insensitive)
+    docs.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+
+
+
     const container = document.getElementById("doc-list");
     container.innerHTML = "";
 
@@ -60,6 +67,7 @@ async function loadDocs() {
     });
   } catch (err) {
     document.getElementById("doc-list").textContent = "Failed to load docs_index.json";
+
     console.error(err);
   }
 }
